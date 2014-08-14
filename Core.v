@@ -125,8 +125,8 @@ Hint Rewrite @inverse_inverse @inverse_left_inverse @inverse_right_inverse : pat
 
 Program Instance Sets_Precategory : Precategory :=
 { ob      := Type
-; hom     := fun x y => x → y
-; compose := fun _ _ _ f g x => f (g x)
+; hom     := λ x y, x → y
+; compose := λ _ _ _ f g x, f (g x)
 }.
 Solve All Obligations with path_induction.
 
@@ -205,7 +205,7 @@ Class Prefunctor :=
 ; fmap : ∀ {x y : dom}, (x ~> y) → (fobj x ~> fobj y)
 ; fmap_id : ∀ {x : dom}, fmap (@id dom x) ~ @id cod (fobj x)
 ; fmap_compose : ∀ {x y z : dom} (f : y ~> z) (g : x ~> y),
-   fmap f ∘ fmap g = fmap (f ∘ g)
+   fmap f ∘ fmap g ~ fmap (f ∘ g)
 }.
 
 Program Instance map_path `(f : A -> B) : Prefunctor := 
@@ -246,8 +246,8 @@ Coercion strictcategory_category : StrictCategory >-> Category.
 
 Program Instance Op_Precategory (C : Precategory) : Precategory :=
 { ob := C
-; hom := fun x y => @hom C y x
-; compose := fun x y z f g => @compose C z y x g f
+; hom := λ x y, @hom C y x
+; compose := λ x y z f g, @compose C z y x g f
 ; id := @id C
 }.
 Next Obligation. apply (@compose_assoc_op C). Defined.
@@ -258,7 +258,7 @@ Next Obligation. apply (@id_id C). Defined.
 
 Program Instance Op_Pregroupoid (C : Pregroupoid) : Pregroupoid :=
 { pregroupoid_precategory := Op_Precategory C
-; inverse := fun x y => @inverse C y x
+; inverse := λ x y, @inverse C y x
 }.
 Next Obligation. apply (@inverse_inverse C). Defined.
 Next Obligation. apply (@inverse_right_inverse C). Defined.
@@ -271,6 +271,8 @@ Class Op (T:Type) :=
 ; op_op : ∀ (x : T), op (op x) ~ x (* needs funext *)
 }.
 
+
+
 (*
 Program Instance Precategory_Op : Op Precategory :=
 { op := Op_Precategory
@@ -282,7 +284,6 @@ Next Obligation.
   simpl.
   admit.
 
- 
 Program Instance Pregroupoid_Op : Op Pregroupoid :=
 { op := Op_Pregroupoid
 }.
