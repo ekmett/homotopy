@@ -39,14 +39,14 @@ Notation "x ~{ A }~ y" := (@paths A x y) (at level 90).
 Ltac path_induction :=
   intros; repeat progress (
      match goal with
-     | [ p : _ ~ _ |- _ ] => induction p
+     | [ p : _ ~ _ |- _ ] => destruct p
      | _ => idtac
      end
   ); auto.
 
 (* (∞, 1)-category *)
 Class Precategory :=
-{ ob               : Type
+{ ob               :> Type
 ; hom              : ob → ob → Type where "x ~> y" := (hom x y)
 ; compose          : ∀ {x y z : ob}, (y ~> z) → (x ~> y) → (x ~> z) where "f ∘ g" := (compose f g)
 ; compose_assoc    : ∀ {w x y z : ob} (f : y ~> z) (g : x ~> y) (h : w ~> x), f ∘ (g ∘ h) ~ (f ∘ g) ∘ h
@@ -56,6 +56,7 @@ Class Precategory :=
 ; left_id          : ∀ {x y : ob} (f : x ~> y), @id y ∘ f ~ f
 ; id_id            : ∀ {x : ob}, @id x ∘ @id x ~ @id x
 }.
+
 
 Coercion ob : Precategory >-> Sortclass.
 
@@ -122,6 +123,7 @@ Hint Rewrite @inverse_inverse @inverse_left_inverse @inverse_right_inverse : pat
 
 (** Sets *)
 
+(* Local Obligation Tactic := path_induction. *)
 
 Program Instance Sets_Precategory : Precategory :=
 { ob      := Type
@@ -198,24 +200,43 @@ Arguments as_right_id [!C%category] x%ob y%ob f%hom i%hom H%hom : rename.
 
 (* Prefunctor *)
 
-Class Prefunctor :=
+Record Prefunctor :=
 { dom : Precategory
 ; cod : Precategory
 ; fobj :> dom → cod
-; fmap : ∀ {x y : dom}, (x ~> y) → (fobj x ~> fobj y)
-; fmap_id : ∀ {x : dom}, fmap (@id dom x) ~ @id cod (fobj x)
-; fmap_compose : ∀ {x y z : dom} (f : y ~> z) (g : x ~> y),
-   fmap f ∘ fmap g ~ fmap (f ∘ g)
+; map : ∀ {x y : dom}, (x ~> y) → (fobj x ~> fobj y)
+; map_id : ∀ {x : dom}, map (@id dom x) ~ @id cod (fobj x)
+; map_compose : ∀ {x y z : dom} (f : y ~> z) (g : x ~> y),
+   map f ∘ map g ~ map (f ∘ g)
 }.
 
-Program Instance map_path `(f : A -> B) : Prefunctor := 
-{ dom := Paths A
-; cod := Paths B
-; fobj := f
-}.
+Program Definition map_path {A B} (f : A -> B) : Prefunctor := Build_Prefunctor (Paths A) (Paths B) f _ _ _.
 Next Obligation. path_induction. Defined.
 Next Obligation. path_induction. Defined.
 Next Obligation. path_induction. Defined.
+
+Definition contractible A := {x : A & ∀ y : A, y ~ x}.
+Definition fiber {A B} (f : A -> B) (y : B) := { x : A & f x ~ y }.
+
+Ltac contract_fiber y p :=
+  match goal with
+  | [ |- contractible (@fiber _ _ ?f ?x) ] =>
+    eexists (existT (fun z => f z ~ x) y p);
+      let z := fresh "z" in
+      let q := fresh "q" in 
+        intros [z q] 
+  end.
+
+Theorem transport {A} {P: A -> Type} {x y : A} (p : x ~ y): P x → P y.
+Proof. path_induction. Defined.
+
+Theorem ap {A B} (f g : A → B): (f ~ g) → ∀ x, f x ~ g x.
+Proof. path_induction. Defined.
+
+(*
+Theorem map_naturality A (f : A → A) (p : ∀ x, f x ~ x) (x y : A) (q : x ~ y) : 
+  (p y ∘ map_path f q ~ q ∘ p x) % path.
+*)
 
 Definition isProp (A : Type) := ∀ (x y : A), x ~ y.
 Definition isSet (A : Type) := ∀ (x y : A) (p q : x ~ y), p ~ q.
@@ -225,6 +246,8 @@ Class Category :=
 { category_precategory :> Precategory
 ; hom_set : ∀ {x y}, isSet (x ~> y)
 }.
+
+
 
 Coercion category_precategory : Category >-> Precategory. 
 
@@ -310,3 +333,4 @@ Class Transitive {A} (R : relation A) :=
   transitivity : ∀ (x y z : A), R y z -> R x y -> R x z.
 
 *)
+
