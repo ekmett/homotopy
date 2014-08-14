@@ -46,7 +46,10 @@ Ltac path_induction :=
 
 Local Obligation Tactic := program_simpl; path_induction.
 
-(* (∞, 1)-category *)
+(* For an enriched category `hom x y` is an object in V. *)
+(* An internal category also has `ob` as an object in V. *)
+
+(* Model an (∞, 1)-category / category up to coherent homotopy *)
 Class Precategory :=
 { ob               :> Type
 ; hom              : ob → ob → Type where "x ~> y" := (hom x y)
@@ -85,7 +88,7 @@ Arguments right_id [!C%category] x%ob y%ob f%hom : rename.
 Arguments left_id [!C%category] x%ob y%ob f%hom : rename.
 Arguments id_id [!C%category] x%ob : rename.
 
-Hint Resolve @compose_assoc : category morphism.
+Hint Resolve @compose_assoc @compose_assoc_op : category morphism.
 Hint Resolve @left_id @right_id @id_id : category hom.
 Hint Rewrite @left_id @right_id @id_id : category.
 Hint Rewrite @left_id @right_id @id_id : hom.
