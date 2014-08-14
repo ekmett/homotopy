@@ -44,6 +44,8 @@ Ltac path_induction :=
      end
   ); auto.
 
+Local Obligation Tactic := program_simpl; path_induction.
+
 (* (∞, 1)-category *)
 Class Precategory :=
 { ob               :> Type
@@ -56,7 +58,6 @@ Class Precategory :=
 ; left_id          : ∀ {x y : ob} (f : x ~> y), @id y ∘ f ~ f
 ; id_id            : ∀ {x : ob}, @id x ∘ @id x ~ @id x
 }.
-
 
 Coercion ob : Precategory >-> Sortclass.
 
@@ -123,14 +124,11 @@ Hint Rewrite @inverse_inverse @inverse_left_inverse @inverse_right_inverse : pat
 
 (** Sets *)
 
-(* Local Obligation Tactic := path_induction. *)
-
 Program Instance Sets_Precategory : Precategory :=
 { ob      := Type
 ; hom     := λ x y, x → y
 ; compose := λ _ _ _ f g x, f (g x)
 }.
-Solve All Obligations with path_induction.
 
 (*
 Program Instance Sets_Category : Category :=
@@ -151,16 +149,10 @@ Program Instance Paths_Precategory {A} : Precategory :=
 { ob := A
 ; hom := @paths A
 }.
-Solve All Obligations with path_induction.
 
 Program Instance Paths_Pregroupoid {A} : Pregroupoid :=
 { pregroupoid_precategory := @Paths_Precategory A
 }.
-Next Obligation. path_induction. Defined.
-Next Obligation. path_induction. Defined.
-Next Obligation. path_induction. Defined.
-Next Obligation. path_induction. Defined.
-
  
 Definition Paths A := @Paths_Pregroupoid A.
 Definition path_compose {A} := @compose (@Paths_Precategory A).
@@ -198,6 +190,8 @@ Defined.
 Arguments as_right_id [!C%category] x%ob y%ob f%hom i%hom H%hom : rename.
 *)
 
+
+
 (* Prefunctor *)
 
 Record Prefunctor :=
@@ -211,9 +205,6 @@ Record Prefunctor :=
 }.
 
 Program Definition map_path {A B} (f : A -> B) : Prefunctor := Build_Prefunctor (Paths A) (Paths B) f _ _ _.
-Next Obligation. path_induction. Defined.
-Next Obligation. path_induction. Defined.
-Next Obligation. path_induction. Defined.
 
 Definition contractible A := {x : A & ∀ y : A, y ~ x}.
 Definition fiber {A B} (f : A -> B) (y : B) := { x : A & f x ~ y }.
@@ -246,8 +237,6 @@ Class Category :=
 { category_precategory :> Precategory
 ; hom_set : ∀ {x y}, isSet (x ~> y)
 }.
-
-
 
 Coercion category_precategory : Category >-> Precategory. 
 
