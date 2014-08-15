@@ -12,6 +12,7 @@ Set Universe Polymorphism.
 Generalizable All Variables.
 
 Reserved Notation "x ~> y" (at level 90, right associativity).
+Reserved Notation "x ⇒ y" (at level 90, right associativity).
 Reserved Notation "f ∘ g" (at level 45).
 Reserved Notation "1".
 Reserved Notation "x ~{ C }~> y" (at level 90, right associativity).
@@ -53,6 +54,7 @@ Local Obligation Tactic := program_simpl; path_induction.
 Class Precategory :=
 { ob               :> Type
 ; hom              : ob → ob → Type where "x ~> y" := (hom x y)
+; hom2             : ∀ {x y}, hom x y -> hom x y -> Type where "x ⇒ y"
 ; compose          : ∀ {x y z : ob}, (y ~> z) → (x ~> y) → (x ~> z) where "f ∘ g" := (compose f g)
 ; compose_assoc    : ∀ {w x y z : ob} (f : y ~> z) (g : x ~> y) (h : w ~> x), f ∘ (g ∘ h) ~ (f ∘ g) ∘ h
 ; compose_assoc_op : ∀ {w x y z : ob} (f : y ~> z) (g : x ~> y) (h : w ~> x), (f ∘ g) ∘ h ~ f ∘ (g ∘ h)

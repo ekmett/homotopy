@@ -48,3 +48,12 @@ Definition Pi {I J : Type} (k : I -> J) (f : I -> Type) (j : J) : Type :=
 
 Hint Unfold Pi.
 
+(* dependent polynomial functor, or best sorority ever *)
+Definition Poly {I P S O} (r : P -> I) (t : P -> S) (q : S -> O) (z : I -> Type) : O -> Type :=
+  Sigma q (Pi t (Delta r z)).
+
+Inductive IR (I O : Type) : Type
+  := iota : ∀ (o : O), IR I O
+   | sigma : ∀ (S : Type) (K : S -> IR I O), IR I O
+   | delta : ∀ (P : Type) (K : (P -> I) -> IR I O), IR I O.
+
