@@ -1,6 +1,5 @@
-Require Export Coq.Unicode.Utf8_core.
-Require Export Coq.Program.Tactics.
-Require Export Coq.Logic.FunctionalExtensionality.
+Require Import Coq.Unicode.Utf8_core.
+Require Import Coq.Program.Tactics.
 
 Set Automatic Introduction.
 Set Implicit Arguments.
@@ -20,13 +19,32 @@ Definition fiber {I: Type} (s : Type / I) (i : I) : Type :=
 Hint Unfold fiber.
 
 Definition unfiber {I : Type} (f : I -> Type) : { x : Type & x -> I} :=
-  existT (λ x : Type, x → I) {x : I & f x}
-    (λ X : {x : I & f x}, let (x, _) := X in x).
+  existT _ {x : I & f x} (@projT1 _ _).
 
 Hint Unfold unfiber.
 
-Lemma unfiber_fiber {I: Type} (s : Type / I) : unfiber (fiber s) = s.
-Admitted.
+(** These lemmas require Axiom K / UIP.
 
+Lemma unfiber_fiber {I: Type} (s : Type / I) : unfiber (fiber s) = s.
 Lemma fiber_unfiber {I: Type} (s : I → Type) (i : I) : fiber (unfiber s) i = s i. 
-Admitted.
+
+*)
+
+(* Sigma -| Delta -| Pi *)
+
+(* The pullback along k of (f : X -> J). *)
+Definition Delta {I J : Type} (k : I -> J) (f : J -> Type) (i : I) : Type :=
+  f (k i).
+
+Hint Unfold Delta.
+
+Definition Sigma {I J : Type} (k : I -> J) (f : I -> Type) (j : J) : Type :=  
+  { i : I & k i = j & f i }.
+
+Hint Unfold Sigma.
+
+Definition Pi {I J : Type} (k : I -> J) (f : I -> Type) (j : J) : Type :=
+  ∀ (i : I), k i = j → f i.  
+
+Hint Unfold Pi.
+
