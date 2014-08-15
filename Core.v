@@ -34,13 +34,13 @@ Bind Scope path_scope with paths.
 Arguments refl {A a}, [A] a.
 Hint Resolve @refl.
 
-Notation "x ~ y" := (paths x y) (at level 90).
-Notation "x ~{ A }~ y" := (@paths A x y) (at level 90).
+Notation "x = y" := (paths x y) (at level 70).
+Notation "x ={ A }= y" := (@paths A x y) (at level 70).
 
 Ltac path_induction :=
   intros; repeat progress (
      match goal with
-     | [ p : _ ~ _ |- _ ] => destruct p
+     | [ p : @paths _ _ _ |- _ ] => destruct p
      | _ => idtac
      end
   ); auto.
@@ -54,14 +54,13 @@ Local Obligation Tactic := program_simpl; path_induction.
 Class Precategory :=
 { ob               :> Type
 ; hom              : ob → ob → Type where "x ~> y" := (hom x y)
-; hom2             : ∀ {x y}, hom x y -> hom x y -> Type where "x ⇒ y"
 ; compose          : ∀ {x y z : ob}, (y ~> z) → (x ~> y) → (x ~> z) where "f ∘ g" := (compose f g)
-; compose_assoc    : ∀ {w x y z : ob} (f : y ~> z) (g : x ~> y) (h : w ~> x), f ∘ (g ∘ h) ~ (f ∘ g) ∘ h
-; compose_assoc_op : ∀ {w x y z : ob} (f : y ~> z) (g : x ~> y) (h : w ~> x), (f ∘ g) ∘ h ~ f ∘ (g ∘ h)
+; compose_assoc    : ∀ {w x y z : ob} (f : y ~> z) (g : x ~> y) (h : w ~> x), f ∘ (g ∘ h) = (f ∘ g) ∘ h
+; compose_assoc_op : ∀ {w x y z : ob} (f : y ~> z) (g : x ~> y) (h : w ~> x), (f ∘ g) ∘ h = f ∘ (g ∘ h)
 ; id               : ∀ {x : ob}, x ~> x
-; right_id         : ∀ {x y : ob} (f : x ~> y), f ∘ @id x ~ f
-; left_id          : ∀ {x y : ob} (f : x ~> y), @id y ∘ f ~ f
-; id_id            : ∀ {x : ob}, @id x ∘ @id x ~ @id x
+; right_id         : ∀ {x y : ob} (f : x ~> y), f ∘ @id x = f
+; left_id          : ∀ {x y : ob} (f : x ~> y), @id y ∘ f = f
+; id_id            : ∀ {x : ob}, @id x ∘ @id x = @id x
 }.
 
 Coercion ob : Precategory >-> Sortclass.
@@ -108,9 +107,9 @@ Open Scope category_scope.
 Class Pregroupoid :=
 { pregroupoid_precategory :> Precategory
 ; inverse : ∀ {x y}, (x ~> y) → (y ~> x)
-; inverse_inverse : ∀ {x y} (f : x ~> y), inverse (inverse f) ~ f
-; inverse_left_inverse : ∀ {x y} (f : x ~> y), inverse f ∘ f ~ id x 
-; inverse_right_inverse : ∀ {x y} (f : x ~> y), f ∘ inverse f ~ id y 
+; inverse_inverse : ∀ {x y} (f : x ~> y), inverse (inverse f) = f
+; inverse_left_inverse : ∀ {x y} (f : x ~> y), inverse f ∘ f = id x 
+; inverse_right_inverse : ∀ {x y} (f : x ~> y), f ∘ inverse f = id y 
 }.
 
 Coercion pregroupoid_precategory : Pregroupoid >-> Precategory. 
@@ -176,7 +175,7 @@ Proof.
 Qed.
 
 (*
-Definition as_left_id { C : Precategory } {x y : C} (f: x ~> y) i (H: i = 1) : i ∘ f ~ f.
+Definition as_left_id { C : Precategory } {x y : C} (f: x ~> y) i (H: i = 1) : i ∘ f = f.
 Proof.
   rewrite -> H.
   path_induction.
@@ -185,7 +184,7 @@ Defined.
 
 Arguments as_left_id [!C%category] x%ob y%ob f%hom i%hom H%hom : rename.
 
-Definition as_right_id { C : Precategory } {x y : C} (f : x ~> y) i (H: i = 1) : f ∘ i ~ f.
+Definition as_right_id { C : Precategory } {x y : C} (f : x ~> y) i (H: i = 1) : f ∘ i = f.
 Proof.    
   rewrite -> H.
   path_induction.
@@ -204,38 +203,38 @@ Record Prefunctor :=
 ; cod : Precategory
 ; fobj :> dom → cod
 ; map : ∀ {x y : dom}, (x ~> y) → (fobj x ~> fobj y)
-; map_id : ∀ {x : dom}, map (@id dom x) ~ @id cod (fobj x)
+; map_id : ∀ {x : dom}, map (@id dom x) = @id cod (fobj x)
 ; map_compose : ∀ {x y z : dom} (f : y ~> z) (g : x ~> y),
-   map f ∘ map g ~ map (f ∘ g)
+   map f ∘ map g = map (f ∘ g)
 }.
 
 Program Definition map_path {A B} (f : A -> B) : Prefunctor := Build_Prefunctor (Paths A) (Paths B) f _ _ _.
 
-Definition contractible A := {x : A & ∀ y : A, y ~ x}.
-Definition fiber {A B} (f : A -> B) (y : B) := { x : A & f x ~ y }.
+Definition contractible A := {x : A & ∀ y : A, y = x}.
+Definition fiber {A B} (f : A -> B) (y : B) := { x : A & f x = y }.
 
 Ltac contract_fiber y p :=
   match goal with
   | [ |- contractible (@fiber _ _ ?f ?x) ] =>
-    eexists (existT (fun z => f z ~ x) y p);
+    eexists (existT (fun z => f z = x) y p);
       let z := fresh "z" in
       let q := fresh "q" in 
         intros [z q] 
   end.
 
-Theorem transport {A} {P: A -> Type} {x y : A} (p : x ~ y): P x → P y.
-Proof. path_induction. Defined.
+Theorem transport {A} {P: A -> Type} {x y : A} (p : x = y): P x → P y.
+Proof. program_simpl. Defined.
 
-Theorem ap {A B} (f g : A → B): (f ~ g) → ∀ x, f x ~ g x.
-Proof. path_induction. Defined.
+Theorem ap {A B} (f g : A → B): (f = g) → ∀ x, f x = g x.
+Proof. program_simpl. Defined.
 
 (*
-Theorem map_naturality A (f : A → A) (p : ∀ x, f x ~ x) (x y : A) (q : x ~ y) : 
-  (p y ∘ map_path f q ~ q ∘ p x) % path.
+Theorem map_naturality A (f : A → A) (p : ∀ x, f x = x) (x y : A) (q : x = y) : 
+  (p y ∘ map_path f q = q ∘ p x) % path.
 *)
 
-Definition isProp (A : Type) := ∀ (x y : A), x ~ y.
-Definition isSet (A : Type) := ∀ (x y : A) (p q : x ~ y), p ~ q.
+Definition isProp (A : Type) := ∀ (x y : A), x = y.
+Definition isSet (A : Type) := ∀ (x y : A) (p q : x = y), p = q.
 
 (* a category is an (∞,1)-category, where the hom-sets are actual sets. *)
 Class Category :=
@@ -285,7 +284,7 @@ Next Obligation. apply (@inverse_left_inverse C). Defined.
 
 Class Op (T:Type) :=
 { op : T -> T
-; op_op : ∀ (x : T), op (op x) ~ x (* needs funext *)
+; op_op : ∀ (x : T), op (op x) = x (* needs funext *)
 }.
 
 
