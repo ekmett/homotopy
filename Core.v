@@ -187,9 +187,18 @@ Record Functor :=
 }.
 
 (* Probably the first novel development in this file *)
-Program Definition ap {A B} (f : A -> B) : Functor := Build_Functor (Paths A) (Paths B) f _ _ _.
+(* Program Definition ap {A B} (f : A -> B) : Functor := Build_Functor (Paths A) (Paths B) f _ _ _. *)
+Program Definition ap {A B} (f : A -> B) : Functor :=
+{| dom := Paths A
+ ; cod := Paths B
+|}.
 
-Program Definition transport {A} {P: A -> Type} : Functor := Build_Functor (Paths A) Sets_Category P _ _ _.
+(* Program Definition transport {A} {P: A -> Type} : Functor := Build_Functor (Paths A) Sets_Category P _ _ _. *)
+Program Definition transport {A} {P: A -> Type} : Functor :=
+{| dom := Paths A
+ ; cod := Sets_Category
+ ; fobj := P
+|}.
 
 (* h-levels 0..2 *)
 Definition contractible (A : Type) := {x : A & ∀ y : A, y = x}.
@@ -197,7 +206,6 @@ Definition prop (A : Type) := ∀ (x y : A), x = y.
 Definition set (A : Type) := ∀ (x y : A), prop (x = y).
 
 (* Alternate definitions.
-
 Definition prop' A := A → contractible A.
 Definition prop'' A := ∀ (x y : A), contractible (x = y).
 Definition set' (A : Type) := ∀ (x y : A) (p q : x = y), p = q.
@@ -221,8 +229,7 @@ Ltac contract_fiber y p :=
   end.
 
 (*
-Theorem map_naturality A (f : A → A) (p : ∀ x, f x = x) (x y : A) (q : x = y) : 
-  (p y ∘ map_path f q = q ∘ p x) % path.
+Theorem map_naturality A (f : A → A) (p : ∀ x, f x = x) (x y : A) (q : x = y) : (p y ∘ map_path f q = q ∘ p x) % path.
 *)
 
 (* a category is an (∞,1)-category, where the hom-sets are actual sets. *)
@@ -255,19 +262,19 @@ Program Instance Op_Category (C : Category) : Category :=
 ; compose := λ x y z f g, @compose C z y x g f
 ; id := @id C
 }.
-Next Obligation. apply (@compose_assoc_op C). Defined.
-Next Obligation. apply (@compose_assoc C). Defined.
-Next Obligation. apply (@left_id C). Defined.
-Next Obligation. apply (@right_id C). Defined.
-Next Obligation. apply (@id_id C). Defined.
+Next Obligation. apply compose_assoc_op. Defined.
+Next Obligation. apply compose_assoc. Defined.
+Next Obligation. apply left_id. Defined.
+Next Obligation. apply right_id. Defined.
+Next Obligation. apply id_id. Defined.
 
 Program Instance Op_Groupoid (C : Groupoid) : Groupoid :=
 { groupoid_category := Op_Category C
 ; inverse := λ x y, @inverse C y x
 }.
-Next Obligation. apply (@inverse_inverse C). Defined.
-Next Obligation. apply (@inverse_right_inverse C). Defined.
-Next Obligation. apply (@inverse_left_inverse C). Defined.
+Next Obligation. apply inverse_inverse. Defined.
+Next Obligation. apply inverse_right_inverse. Defined.
+Next Obligation. apply inverse_left_inverse. Defined.
 
 
 (* TODO 
