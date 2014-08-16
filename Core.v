@@ -255,19 +255,19 @@ Program Instance Op_Category (C : Category) : Category :=
 ; compose := λ x y z f g, @compose C z y x g f
 ; id := @id C
 }.
-Next Obligation. apply (@compose_assoc_op C). Defined.
-Next Obligation. apply (@compose_assoc C). Defined.
-Next Obligation. apply (@left_id C). Defined.
-Next Obligation. apply (@right_id C). Defined.
-Next Obligation. apply (@id_id C). Defined.
+Next Obligation. apply compose_assoc_op. Defined.
+Next Obligation. apply compose_assoc. Defined.
+Next Obligation. apply left_id. Defined.
+Next Obligation. apply right_id. Defined.
+Next Obligation. apply id_id. Defined.
 
 Program Instance Op_Groupoid (C : Groupoid) : Groupoid :=
 { groupoid_category := Op_Category C
 ; inverse := λ x y, @inverse C y x
 }.
-Next Obligation. apply (@inverse_inverse C). Defined.
-Next Obligation. apply (@inverse_right_inverse C). Defined.
-Next Obligation. apply (@inverse_left_inverse C). Defined.
+Next Obligation. apply inverse_inverse. Defined.
+Next Obligation. apply inverse_right_inverse. Defined.
+Next Obligation. apply inverse_left_inverse. Defined.
 
 (* TODO 
   Category with weak equivalences
