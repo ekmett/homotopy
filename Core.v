@@ -2,6 +2,7 @@
 
 Require Export Coq.Unicode.Utf8_core.
 Require Export Coq.Program.Tactics.
+(* Require Export Coq.Init.Datatypes. *)
 
 Set Automatic Introduction.
 Set Implicit Arguments.
@@ -27,7 +28,7 @@ Local Open Scope hom_scope.
 (** paths *)
 
 Inductive paths {A} : A → A → Type :=
-  refl : ∀ (a: A), paths a a.
+  refl : ∀ {a: A}, paths a a.
 
 Bind Scope path_scope with paths.
 
@@ -67,11 +68,8 @@ Bind Scope ob_scope with ob.
 Bind Scope hom_scope with hom.
 
 Tactic Notation "evia" open_constr(y) :=
-  let R := match goal with |- ?R ?x ?z => constr:(R) end in
-  let x := match goal with |- ?R ?x ?z => constr:(x) end in
-  let z := match goal with |- ?R ?x ?z => constr:(z) end in
-  refine (@compose _ R _ x y z _ _).
-
+  match goal with |- ?R ?x ?z => refine (@compose _ R _ x y z _ _) end.
+  
 Tactic Notation "evia" := evia _.
 
 Create HintDb category discriminated.
@@ -94,8 +92,8 @@ Infix "~>" := hom : category_scope.
 Infix "~{ C }~>" := (@hom C) (at level 90, right associativity) : category_scope.
 Infix "∘" := compose : hom_scope.
 
-Notation "1" := id : hom_scope.
-Notation "1" := refl : path_scope.
+Notation "1" := (id _) : hom_scope.
+Notation "1" := (refl) : path_scope.
 
 Open Scope category_scope.
 
@@ -160,8 +158,7 @@ Proof.
   etransitivity; [ symmetry; apply id1_left | apply id0_right ].
 Qed.
 
-(*
-Definition as_left_id { C : Category } {x y : C} (f: x ~> y) i (H: i = 1) : i ∘ f = f.
+Definition as_left_id { C : Category } {x y : C} (f : x ~> y) (i : y ~> y) (H : i = @id C y) : i ∘ f = f.
 Proof.
   rewrite -> H.
   path_induction.
@@ -170,7 +167,7 @@ Defined.
 
 Arguments as_left_id [!C%category] x%ob y%ob f%hom i%hom H%hom : rename.
 
-Definition as_right_id { C : Category } {x y : C} (f : x ~> y) i (H: i = 1) : f ∘ i = f.
+Definition as_right_id { C : Category } {x y : C} (f : x ~> y) (i : x ~> x) (H: i = @id C x) : f ∘ i = f.
 Proof.    
   rewrite -> H.
   path_induction.
@@ -178,9 +175,6 @@ Proof.
 Defined.
 
 Arguments as_right_id [!C%category] x%ob y%ob f%hom i%hom H%hom : rename.
-*)
-
-(* Prefunctor *)
 
 Record Functor :=
 { dom : Category
@@ -192,12 +186,29 @@ Record Functor :=
    map f ∘ map g = map (f ∘ g)
 }.
 
+(* Probably the first novel development in this file *)
 Program Definition ap {A B} (f : A -> B) : Functor := Build_Functor (Paths A) (Paths B) f _ _ _.
 
 Program Definition transport {A} {P: A -> Type} : Functor := Build_Functor (Paths A) Sets_Category P _ _ _.
 
+(* h-levels 0..2 *)
+Definition contractible (A : Type) := {x : A & ∀ y : A, y = x}.
+Definition prop (A : Type) := ∀ (x y : A), x = y.
+Definition set (A : Type) := ∀ (x y : A), prop (x = y).
 
-Definition contractible A := {x : A & ∀ y : A, y = x}.
+(* Alternate definitions.
+
+Definition prop' A := A → contractible A.
+Definition prop'' A := ∀ (x y : A), contractible (x = y).
+Definition set' (A : Type) := ∀ (x y : A) (p q : x = y), p = q.
+*)
+
+(* Paulin-Mohring J *)
+Program Definition J 
+  {A : Type}  (M : A) (C : ∀ (y : A), (@paths A M y) -> Type)
+  (H : C M refl) (N : A) (P : @paths A M N) : C N P.
+Proof. path_induction. Defined.
+
 Definition fiber {A B} (f : A -> B) (y : B) := { x : A & f x = y }.
 
 Ltac contract_fiber y p :=
@@ -214,29 +225,24 @@ Theorem map_naturality A (f : A → A) (p : ∀ x, f x = x) (x y : A) (q : x = y
   (p y ∘ map_path f q = q ∘ p x) % path.
 *)
 
-Definition isProp (A : Type) := ∀ (x y : A), x = y.
-Definition isSet (A : Type) := ∀ (x y : A) (p q : x = y), p = q.
-
-(* a category is an (∞,1)-category, where the hom-sets are actual sets.
-
-*)
+(* a category is an (∞,1)-category, where the hom-sets are actual sets. *)
 Class Category1 :=
 { category1_category :> Category
-; hom_set : ∀ {x y}, isSet (x ~> y)
+; hom_set : ∀ {x y}, set (x ~> y)
 }.
 
 Coercion category1_category : Category1 >-> Category. 
 
 Class ThinCategory :=
 { thincategory_category1 :> Category1
-; hom_prop : ∀ {x y}, isProp (x ~> y)
+; hom_prop : ∀ {x y}, prop (x ~> y)
 }.
 
 Coercion thincategory_category1 : ThinCategory >-> Category1. 
 
 Class StrictCategory :=
 { strictcategory_category1 :> Category1
-; ob_set : ∀ x, isSet x
+; ob_set : ∀ x, set x
 }.
 
 Coercion strictcategory_category1 : StrictCategory >-> Category1.
@@ -263,9 +269,12 @@ Next Obligation. apply (@inverse_inverse C). Defined.
 Next Obligation. apply (@inverse_right_inverse C). Defined.
 Next Obligation. apply (@inverse_left_inverse C). Defined.
 
+
 (* TODO 
   Category with weak equivalences
-  Homotopical categories
+  Homotopical categories, f . g, g . h   => f, g, h, f . g . h
+  weak factorization schemes
+    orthogonal factorization schemes
   Quillen model categories
   In enriched categories over V `hom x y` is an object in V.
   In internal categories over V `ob` as an object in V.
@@ -273,31 +282,30 @@ Next Obligation. apply (@inverse_left_inverse C). Defined.
   Then we can model the 'monoidal categories as bicategories of one object'
 *)
 
-(*
-
 Class Op (T:Type) :=
 { op : T -> T
 ; op_op : ∀ (x : T), op (op x) = x 
 }.
 
-Program Instance Precategory_Op : Op Precategory :=
-{ op := Op_Precategory
+(*
+Program Instance Category_Op : Op Category :=
+{ op := Op_Category
 }.
 Next Obligation. 
-  unfold Op_Precategory. 
-  unfold Op_Precategory_obligation_1.
-  unfold Op_Precategory_obligation_2.
+  unfold Op_Category. 
+  unfold Op_Category_obligation_1.
+  unfold Op_Category_obligation_2.
   simpl.
   admit.
 
-Program Instance Pregroupoid_Op : Op Pregroupoid :=
-{ op := Op_Pregroupoid
+Program Instance Groupoid_Op : Op Groupoid :=
+{ op := Op_Groupoid
 }.
 Obligation 1.
-  unfold Op_Pregroupoid.
-  unfold Op_Pregroupoid_obligation_1.
-  unfold Op_Pregroupoid_obligation_2.
-  unfold Op_Pregroupoid_obligation_3.
+  unfold Op_Groupoid.
+  unfold Op_Groupoid_obligation_1.
+  unfold Op_Groupoid_obligation_2.
+  unfold Op_Groupoid_obligation_3.
   simpl.
   admit.
 
