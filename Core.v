@@ -83,10 +83,10 @@ Arguments right_id [!C%category] x%ob y%ob f%hom : rename.
 Arguments left_id [!C%category] x%ob y%ob f%hom : rename.
 Arguments id_id [!C%category] x%ob : rename.
 
-Hint Resolve @compose_assoc @compose_assoc_op : category morphism.
-Hint Resolve @left_id @right_id @id_id : category hom.
-Hint Rewrite @left_id @right_id @id_id : category.
-Hint Rewrite @left_id @right_id @id_id : hom.
+Hint Resolve compose_assoc compose_assoc_op : category morphism.
+Hint Resolve left_id right_id id_id : category hom.
+Hint Rewrite left_id right_id id_id : category.
+Hint Rewrite left_id right_id id_id : hom.
 
 Infix "~>" := hom : category_scope.
 Infix "~{ C }~>" := (@hom C) (at level 90, right associativity) : category_scope.
