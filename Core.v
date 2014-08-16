@@ -192,10 +192,16 @@ Record Functor :=
    map f ∘ map g = map (f ∘ g)
 }.
 
-Program Definition ap {A B} (f : A -> B) : Functor := Build_Functor (Paths A) (Paths B) f _ _ _.
+Program Definition ap {A B} (f : A -> B) : Functor :=
+{| dom := Paths A
+ ; cod := Paths B
+|}.
 
-Program Definition transport {A} {P: A -> Type} : Functor := Build_Functor (Paths A) Sets_Category P _ _ _.
-
+Program Definition transport {A} {P: A -> Type} : Functor :=
+{| dom := Paths A
+ ; cod := Sets_Category
+ ; fobj := P
+|}.
 
 Definition contractible A := {x : A & ∀ y : A, y = x}.
 Definition fiber {A B} (f : A -> B) (y : B) := { x : A & f x = y }.
