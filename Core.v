@@ -47,11 +47,8 @@ Ltac path_induction :=
 
 Local Obligation Tactic := program_simpl; path_induction.
 
-(* For an enriched category `hom x y` is an object in V. *)
-(* An internal category also has `ob` as an object in V. *)
-
-(* Model an (∞, 1)-category / category up to coherent homotopy *)
-Class Precategory :=
+(* An (∞, 1)-category / category up to coherent homotopy *)
+Class Category :=
 { ob               :> Type
 ; hom              : ob → ob → Type where "x ~> y" := (hom x y)
 ; compose          : ∀ {x y z : ob}, (y ~> z) → (x ~> y) → (x ~> z) where "f ∘ g" := (compose f g)
@@ -63,9 +60,9 @@ Class Precategory :=
 ; id_id            : ∀ {x : ob}, @id x ∘ @id x = @id x
 }.
 
-Coercion ob : Precategory >-> Sortclass.
+Coercion ob : Category >-> Sortclass.
 
-Bind Scope category_scope with Precategory.
+Bind Scope category_scope with Category.
 Bind Scope ob_scope with ob.
 Bind Scope hom_scope with hom.
 
@@ -77,10 +74,9 @@ Tactic Notation "evia" open_constr(y) :=
 
 Tactic Notation "evia" := evia _.
 
-(*
 Create HintDb category discriminated.
 Create HintDb hom discriminated.
-*)
+
 Arguments ob C%category : rename.
 Arguments hom !C%category x y : rename.
 Arguments compose [!C%category x%ob y%ob z%ob] f%hom g%hom : rename.
@@ -104,15 +100,15 @@ Notation "1" := refl : path_scope.
 Open Scope category_scope.
 
 (* ∞-groupoid *)
-Class Pregroupoid :=
-{ pregroupoid_precategory :> Precategory
+Class Groupoid :=
+{ groupoid_category :> Category
 ; inverse : ∀ {x y}, (x ~> y) → (y ~> x)
 ; inverse_inverse : ∀ {x y} (f : x ~> y), inverse (inverse f) = f
 ; inverse_left_inverse : ∀ {x y} (f : x ~> y), inverse f ∘ f = id x 
 ; inverse_right_inverse : ∀ {x y} (f : x ~> y), f ∘ inverse f = id y 
 }.
 
-Coercion pregroupoid_precategory : Pregroupoid >-> Precategory. 
+Coercion groupoid_category : Groupoid >-> Category. 
 
 Notation "! p" := (inverse p) (at level 50) : hom_scope.
 
@@ -128,44 +124,34 @@ Hint Rewrite @inverse_inverse @inverse_left_inverse @inverse_right_inverse : pat
 
 (** Sets *)
 
-Program Instance Sets_Precategory : Precategory :=
+Program Instance Sets_Category : Category :=
 { ob      := Type
 ; hom     := λ x y, x → y
 ; compose := λ _ _ _ f g x, f (g x)
 }.
 
-(*
-Program Instance Sets_Category : Category :=
-{ category_precategory := Sets_Precategory
-}.
-Next Obligation. 
-  unfold isSet.
-  intros.
-  path_induction.
-  *)
-  
-Definition fun_compose := @compose Sets_Precategory.
+Definition fun_compose := @compose Sets_Category.
 Infix "∘" := fun_compose : type_scope.
 
 (** Paths *)
 
-Program Instance Paths_Precategory {A} : Precategory :=
+Program Instance Paths_Category {A} : Category :=
 { ob := A
 ; hom := @paths A
 }.
 
-Program Instance Paths_Pregroupoid {A} : Pregroupoid :=
-{ pregroupoid_precategory := @Paths_Precategory A
+Program Instance Paths_Groupoid {A} : Groupoid :=
+{ groupoid_category := @Paths_Category A
 }.
  
-Definition Paths A := @Paths_Pregroupoid A.
-Definition path_compose {A} := @compose (@Paths_Precategory A).
-Definition path_inverse {A} := @inverse (@Paths_Pregroupoid A).
+Definition Paths A := @Paths_Groupoid A.
+Definition path_compose {A} := @compose (@Paths_Category A).
+Definition path_inverse {A} := @inverse (@Paths_Groupoid A).
 
 Infix "∘" := path_compose : path_scope.
 Notation "! p" := (path_inverse p) (at level 50) : path_scope.
  
-Lemma unique_id {C : Precategory} (id0 id1 : ∀ {x : C}, x ~> x)
+Lemma unique_id {C : Category} (id0 id1 : ∀ {x : C}, x ~> x)
   (id1_left  : ∀ (x y : C) (f : x ~> y), @id1 y ∘ f = f)
   (id0_right : ∀ (x y : C) (f : x ~> y), f ∘ @id0 x = f) 
   : ∀ x, @id0 x = @id1 x.
@@ -175,7 +161,7 @@ Proof.
 Qed.
 
 (*
-Definition as_left_id { C : Precategory } {x y : C} (f: x ~> y) i (H: i = 1) : i ∘ f = f.
+Definition as_left_id { C : Category } {x y : C} (f: x ~> y) i (H: i = 1) : i ∘ f = f.
 Proof.
   rewrite -> H.
   path_induction.
@@ -184,7 +170,7 @@ Defined.
 
 Arguments as_left_id [!C%category] x%ob y%ob f%hom i%hom H%hom : rename.
 
-Definition as_right_id { C : Precategory } {x y : C} (f : x ~> y) i (H: i = 1) : f ∘ i = f.
+Definition as_right_id { C : Category } {x y : C} (f : x ~> y) i (H: i = 1) : f ∘ i = f.
 Proof.    
   rewrite -> H.
   path_induction.
@@ -194,13 +180,11 @@ Defined.
 Arguments as_right_id [!C%category] x%ob y%ob f%hom i%hom H%hom : rename.
 *)
 
-
-
 (* Prefunctor *)
 
-Record Prefunctor :=
-{ dom : Precategory
-; cod : Precategory
+Record Functor :=
+{ dom : Category
+; cod : Category
 ; fobj :> dom → cod
 ; map : ∀ {x y : dom}, (x ~> y) → (fobj x ~> fobj y)
 ; map_id : ∀ {x : dom}, map (@id dom x) = @id cod (fobj x)
@@ -208,7 +192,10 @@ Record Prefunctor :=
    map f ∘ map g = map (f ∘ g)
 }.
 
-Program Definition map_path {A B} (f : A -> B) : Prefunctor := Build_Prefunctor (Paths A) (Paths B) f _ _ _.
+Program Definition ap {A B} (f : A -> B) : Functor := Build_Functor (Paths A) (Paths B) f _ _ _.
+
+Program Definition transport {A} {P: A -> Type} : Functor := Build_Functor (Paths A) Sets_Category P _ _ _.
+
 
 Definition contractible A := {x : A & ∀ y : A, y = x}.
 Definition fiber {A B} (f : A -> B) (y : B) := { x : A & f x = y }.
@@ -222,12 +209,6 @@ Ltac contract_fiber y p :=
         intros [z q] 
   end.
 
-Theorem transport {A} {P: A -> Type} {x y : A} (p : x = y): P x → P y.
-Proof. program_simpl. Defined.
-
-Theorem ap {A B} (f g : A → B): (f = g) → ∀ x, f x = g x.
-Proof. program_simpl. Defined.
-
 (*
 Theorem map_naturality A (f : A → A) (p : ∀ x, f x = x) (x y : A) (q : x = y) : 
   (p y ∘ map_path f q = q ∘ p x) % path.
@@ -236,31 +217,33 @@ Theorem map_naturality A (f : A → A) (p : ∀ x, f x = x) (x y : A) (q : x = y
 Definition isProp (A : Type) := ∀ (x y : A), x = y.
 Definition isSet (A : Type) := ∀ (x y : A) (p q : x = y), p = q.
 
-(* a category is an (∞,1)-category, where the hom-sets are actual sets. *)
-Class Category :=
-{ category_precategory :> Precategory
+(* a category is an (∞,1)-category, where the hom-sets are actual sets.
+
+*)
+Class Category1 :=
+{ category1_category :> Category
 ; hom_set : ∀ {x y}, isSet (x ~> y)
 }.
 
-Coercion category_precategory : Category >-> Precategory. 
+Coercion category1_category : Category1 >-> Category. 
 
 Class ThinCategory :=
-{ thincategory_category :> Category
+{ thincategory_category1 :> Category1
 ; hom_prop : ∀ {x y}, isProp (x ~> y)
 }.
 
-Coercion thincategory_category : ThinCategory >-> Category. 
+Coercion thincategory_category1 : ThinCategory >-> Category1. 
 
 Class StrictCategory :=
-{ strictcategory_category :> Category
+{ strictcategory_category1 :> Category1
 ; ob_set : ∀ x, isSet x
 }.
 
-Coercion strictcategory_category : StrictCategory >-> Category.
+Coercion strictcategory_category1 : StrictCategory >-> Category1.
 
 (* Opposite notions *)
 
-Program Instance Op_Precategory (C : Precategory) : Precategory :=
+Program Instance Op_Category (C : Category) : Category :=
 { ob := C
 ; hom := λ x y, @hom C y x
 ; compose := λ x y z f g, @compose C z y x g f
@@ -272,24 +255,31 @@ Next Obligation. apply (@left_id C). Defined.
 Next Obligation. apply (@right_id C). Defined.
 Next Obligation. apply (@id_id C). Defined.
 
-Program Instance Op_Pregroupoid (C : Pregroupoid) : Pregroupoid :=
-{ pregroupoid_precategory := Op_Precategory C
+Program Instance Op_Groupoid (C : Groupoid) : Groupoid :=
+{ groupoid_category := Op_Category C
 ; inverse := λ x y, @inverse C y x
 }.
 Next Obligation. apply (@inverse_inverse C). Defined.
 Next Obligation. apply (@inverse_right_inverse C). Defined.
 Next Obligation. apply (@inverse_left_inverse C). Defined.
 
-(* We need funext for these *)
+(* TODO 
+  Category with weak equivalences
+  Homotopical categories
+  Quillen model categories
+  In enriched categories over V `hom x y` is an object in V.
+  In internal categories over V `ob` as an object in V.
+  Build enrichment as enrichment over bicategories.
+  Then we can model the 'monoidal categories as bicategories of one object'
+*)
+
+(*
 
 Class Op (T:Type) :=
 { op : T -> T
-; op_op : ∀ (x : T), op (op x) = x (* needs funext *)
+; op_op : ∀ (x : T), op (op x) = x 
 }.
 
-
-
-(*
 Program Instance Precategory_Op : Op Precategory :=
 { op := Op_Precategory
 }.
@@ -324,6 +314,4 @@ Class Symmetric {A} (R : relation A) :=
 
 Class Transitive {A} (R : relation A) :=
   transitivity : ∀ (x y z : A), R y z -> R x y -> R x z.
-
 *)
-
