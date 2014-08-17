@@ -2,12 +2,13 @@
 
 Require Export Coq.Unicode.Utf8_core.
 Require Export Coq.Program.Tactics.
-(* Require Export Coq.Init.Datatypes. *)
+Require Import Coq.Init.Datatypes.
+Require Import Coq.Init.Specif.
 
 Set Automatic Introduction.
 Set Implicit Arguments.
 Set Printing Projections.
-Set Primitive Projections.
+(* Set Primitive Projections. *)
 Set Shrink Obligations.
 Set Universe Polymorphism.
 Generalizable All Variables.
@@ -36,7 +37,7 @@ Arguments refl {A a}, [A] a.
 Hint Resolve @refl.
 
 Notation "x = y" := (paths x y) (at level 70).
-Notation "x ={ A }= y" := (@paths A x y) (at level 70).
+Notation "x ={ A }= y" := (@paths A x y) (at level 69).
 
 Ltac path_induction :=
   intros; repeat progress (
@@ -176,13 +177,11 @@ Defined.
 
 Arguments as_right_id [!C%category] x%ob y%ob f%hom i%hom H%hom : rename.
 
-Record Functor :=
-{ dom : Category
-; cod : Category
-; fobj :> dom → cod
-; map : ∀ {x y : dom}, (x ~> y) → (fobj x ~> fobj y)
-; map_id : ∀ {x : dom}, map (@id dom x) = @id cod (fobj x)
-; map_compose : ∀ {x y z : dom} (f : y ~> z) (g : x ~> y),
+Record Functor (C: Category) (D: Category) :=
+{ fobj :> C → D
+; map : ∀ {x y : C}, (x ~> y) → (fobj x ~> fobj y)
+; map_id : ∀ {x : C}, map (@id C x) = @id D (fobj x)
+; map_compose : ∀ {x y z : C} (f : y ~> z) (g : x ~> y),
    map f ∘ map g = map (f ∘ g)
 }.
 
@@ -209,40 +208,19 @@ Next Obligation. apply inverse_right_inverse. Defined.
 Next Obligation. apply inverse_left_inverse. Defined.
 
 (* Probably the first novel development in this file *)
-Program Definition ap `(f : A -> B) : Functor :=
-{| dom := Paths A
- ; cod := Paths B
-|}.
+Program Definition ap `(f : A -> B) := Build_Functor (Paths A) (Paths B) _ _ _ _.
+Program Definition transport `(P: A -> Type) := Build_Functor (Paths A) Sets_Category P _ _ _. 
+Program Definition optransport `(P: A -> Type) := Build_Functor (Op_Category (Paths A)) Sets_Category P _ _ _.
+Program Definition coe := Build_Functor (Paths Type) Sets_Category _ _ _ _.
+Program Definition opcoe := Build_Functor (Op_Category (Paths Type)) Sets_Category _ _ _ _.
 
-Program Definition transport `(P: A -> Type) : Functor :=
-{| dom := Paths A
- ; cod := Sets_Category
- ; fobj := P
-|}.
-
-Program Definition optransport `(P: A -> Type) : Functor :=
-{| dom := Op_Category (Paths A)
- ; cod := Sets_Category
- ; fobj := P
-|}.
-
-Program Definition coe : Functor :=
-{| dom := Paths Type
- ; cod := Sets_Category
- ; fobj := fun x => x
-|}.
-
-Program Definition opcoe : Functor :=
-{| dom := Op_Category (Paths Type)
- ; cod := Sets_Category
- ; fobj := fun x => x
-|}.
 
 (* h-levels 0..2 *)
 Definition contractible (A : Type) := {x : A & ∀ y : A, y = x}.
 Definition prop (A : Type) := ∀ (x y : A), x = y.
 Definition set (A : Type) := ∀ (x y : A), prop (x = y).
 
+(* TODO: derive a fancy functor for this *)
 Program Definition path_over `(B: A -> Type) `(p : x = y) (u : B x) (v : B y):= u = v.
 
 (* Paulin-Mohring J *)
@@ -251,7 +229,24 @@ Program Definition J
   (H : C M refl) (N : A) (P : @paths A M N) : C N P.
 Proof. path_induction. Defined.
 
-Definition fiber {A B} (f : A -> B) (y : B) := { x : A & f x = y }.
+(*
+Program Instance Comma {C D E : Category} (f : Functor C E) (g : Functor D E) : Category :=
+{ ob := { c : C & { d : D & f c ~> g d } }
+; hom := λ x y, match x, y with
+  | existT _ a (existT _ b p), existT _ c (existT _ d q) =>
+    { l : a ~> c & { r : b ~> d & map g r ∘ p = q ∘ map f l } } 
+  end
+}.
+Obligation 1. 
+  rapply existT.
+  apply (X ∘ X0).
+  rapply existT.
+  apply (X5 ∘ X9).
+  pose (m := @map_compose D E g X7 X3 X1 X5 X9).
+*)
+
+(* TODO: replace these with a comma category ? *)
+Definition fiber `(f : A -> B) (y : B) := { x : A & f x = y }.
 
 Ltac contract_fiber y p :=
   match goal with
@@ -329,18 +324,5 @@ Obligation 1.
   unfold Op_Groupoid_obligation_3.
   simpl.
   admit.
-
 *) 
 
-(*
-Definition relation (A : Type) := A -> A -> Type.
-
-Class Reflexive {A} (R : relation A) :=
-  reflexivity : ∀ (x : A), R x x.
-
-Class Symmetric {A} (R : relation A) :=
-  symmetry : ∀ (x y : A), R x y -> R y x.
-
-Class Transitive {A} (R : relation A) :=
-  transitivity : ∀ (x y z : A), R y z -> R x y -> R x z.
-*)
