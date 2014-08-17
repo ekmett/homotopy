@@ -186,18 +186,56 @@ Record Functor :=
    map f ∘ map g = map (f ∘ g)
 }.
 
+(* Opposite notions *)
+
+Program Instance Op_Category (C : Category) : Category :=
+{ ob := C
+; hom := λ x y, @hom C y x
+; compose := λ x y z f g, @compose C z y x g f
+; id := @id C
+}.
+Next Obligation. apply compose_assoc_op. Defined.
+Next Obligation. apply compose_assoc. Defined.
+Next Obligation. apply left_id. Defined.
+Next Obligation. apply right_id. Defined.
+Next Obligation. apply id_id. Defined.
+
+Program Instance Op_Groupoid (C : Groupoid) : Groupoid :=
+{ groupoid_category := Op_Category C
+; inverse := λ x y, @inverse C y x
+}.
+Next Obligation. apply inverse_inverse. Defined.
+Next Obligation. apply inverse_right_inverse. Defined.
+Next Obligation. apply inverse_left_inverse. Defined.
+
 (* Probably the first novel development in this file *)
-(* Program Definition ap {A B} (f : A -> B) : Functor := Build_Functor (Paths A) (Paths B) f _ _ _. *)
-Program Definition ap {A B} (f : A -> B) : Functor :=
+Program Definition ap `(f : A -> B) : Functor :=
 {| dom := Paths A
  ; cod := Paths B
 |}.
 
-(* Program Definition transport {A} {P: A -> Type} : Functor := Build_Functor (Paths A) Sets_Category P _ _ _. *)
-Program Definition transport {A} {P: A -> Type} : Functor :=
+Program Definition transport `(P: A -> Type) : Functor :=
 {| dom := Paths A
  ; cod := Sets_Category
  ; fobj := P
+|}.
+
+Program Definition optransport `(P: A -> Type) : Functor :=
+{| dom := Op_Category (Paths A)
+ ; cod := Sets_Category
+ ; fobj := P
+|}.
+
+Program Definition coe : Functor :=
+{| dom := Paths Type
+ ; cod := Sets_Category
+ ; fobj := fun x => x
+|}.
+
+Program Definition opcoe : Functor :=
+{| dom := Op_Category (Paths Type)
+ ; cod := Sets_Category
+ ; fobj := fun x => x
 |}.
 
 (* h-levels 0..2 *)
@@ -205,11 +243,7 @@ Definition contractible (A : Type) := {x : A & ∀ y : A, y = x}.
 Definition prop (A : Type) := ∀ (x y : A), x = y.
 Definition set (A : Type) := ∀ (x y : A), prop (x = y).
 
-(* Alternate definitions.
-Definition prop' A := A → contractible A.
-Definition prop'' A := ∀ (x y : A), contractible (x = y).
-Definition set' (A : Type) := ∀ (x y : A) (p q : x = y), p = q.
-*)
+Program Definition path_over `(B: A -> Type) `(p : x = y) (u : B x) (v : B y):= u = v.
 
 (* Paulin-Mohring J *)
 Program Definition J 
@@ -254,28 +288,6 @@ Class StrictCategory :=
 
 Coercion strictcategory_category1 : StrictCategory >-> Category1.
 
-(* Opposite notions *)
-
-Program Instance Op_Category (C : Category) : Category :=
-{ ob := C
-; hom := λ x y, @hom C y x
-; compose := λ x y z f g, @compose C z y x g f
-; id := @id C
-}.
-Next Obligation. apply compose_assoc_op. Defined.
-Next Obligation. apply compose_assoc. Defined.
-Next Obligation. apply left_id. Defined.
-Next Obligation. apply right_id. Defined.
-Next Obligation. apply id_id. Defined.
-
-Program Instance Op_Groupoid (C : Groupoid) : Groupoid :=
-{ groupoid_category := Op_Category C
-; inverse := λ x y, @inverse C y x
-}.
-Next Obligation. apply inverse_inverse. Defined.
-Next Obligation. apply inverse_right_inverse. Defined.
-Next Obligation. apply inverse_left_inverse. Defined.
-
 
 (* TODO 
   Category with weak equivalences
@@ -288,6 +300,8 @@ Next Obligation. apply inverse_left_inverse. Defined.
   Build enrichment as enrichment over bicategories.
   Then we can model the 'monoidal categories as bicategories of one object'
 *)
+
+
 
 Class Op (T:Type) :=
 { op : T -> T
