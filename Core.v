@@ -239,9 +239,22 @@ Program Definition coe := Build_Functor (Paths Type) Sets_Category _ _ _ _.
 Program Definition opcoe := Build_Functor (Op_Category (Paths Type)) Sets_Category _ _ _ _.
 
 (* h-levels 0..2 *)
-Definition contractible (A : Type) := {x : A & ∀ y : A, y = x}.
-Definition prop (A : Type) := ∀ (x y : A), x = y.
-Definition set (A : Type) := ∀ (x y : A), prop (x = y).
+Definition is_contractible (A : Type) := {x : A & ∀ y : A, y = x}.
+Definition is_prop (A : Type) := ∀ (x y : A), x = y.
+Definition is_set (A : Type) := ∀ (x y : A), is_prop (x = y).
+
+Program Fixpoint is_level (n: nat) (A: Type) : Type :=
+  match n with
+  | O => is_contractible A
+  | S n => ∀ (x y: A), is_level n (@paths A x y)
+  end.
+
+Definition contractible := { A : Type & is_contractible A }. 
+Definition prop := { A : Type & is_prop A }.
+Definition set := { A : Type & is_set A }.
+Definition level (n: nat) := {A : Type & is_level n A }.
+
+(* TODO: Hedberg's theorem showing types with decidable equalities are sets *)
 
 Program Definition path_over `(B: A -> Type) `(p : x = y) (u : B x) (v : B y):= u = v.
 
