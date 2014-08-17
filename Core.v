@@ -209,18 +209,19 @@ Next Obligation. apply inverse_left_inverse. Defined.
 
 (* Probably the first novel development in this file *)
 Program Definition ap `(f : A -> B) := Build_Functor (Paths A) (Paths B) _ _ _ _.
+
 Program Definition transport `(P: A -> Type) := Build_Functor (Paths A) Sets_Category P _ _ _. 
+
 Program Definition optransport `(P: A -> Type) := Build_Functor (Op_Category (Paths A)) Sets_Category P _ _ _.
+
 Program Definition coe := Build_Functor (Paths Type) Sets_Category _ _ _ _.
+
 Program Definition opcoe := Build_Functor (Op_Category (Paths Type)) Sets_Category _ _ _ _.
-
-
 (* h-levels 0..2 *)
 Definition contractible (A : Type) := {x : A & ∀ y : A, y = x}.
 Definition prop (A : Type) := ∀ (x y : A), x = y.
 Definition set (A : Type) := ∀ (x y : A), prop (x = y).
 
-(* TODO: derive a fancy functor for this *)
 Program Definition path_over `(B: A -> Type) `(p : x = y) (u : B x) (v : B y):= u = v.
 
 (* Paulin-Mohring J *)
@@ -228,22 +229,6 @@ Program Definition J
   {A : Type}  (M : A) (C : ∀ (y : A), (@paths A M y) -> Type)
   (H : C M refl) (N : A) (P : @paths A M N) : C N P.
 Proof. path_induction. Defined.
-
-(*
-Program Instance Comma {C D E : Category} (f : Functor C E) (g : Functor D E) : Category :=
-{ ob := { c : C & { d : D & f c ~> g d } }
-; hom := λ x y, match x, y with
-  | existT _ a (existT _ b p), existT _ c (existT _ d q) =>
-    { l : a ~> c & { r : b ~> d & map g r ∘ p = q ∘ map f l } } 
-  end
-}.
-Obligation 1. 
-  rapply existT.
-  apply (X ∘ X0).
-  rapply existT.
-  apply (X5 ∘ X9).
-  pose (m := @map_compose D E g X7 X3 X1 X5 X9).
-*)
 
 (* TODO: replace these with a comma category ? *)
 Definition fiber `(f : A -> B) (y : B) := { x : A & f x = y }.
@@ -256,10 +241,6 @@ Ltac contract_fiber y p :=
       let q := fresh "q" in 
         intros [z q] 
   end.
-
-(*
-Theorem map_naturality A (f : A → A) (p : ∀ x, f x = x) (x y : A) (q : x = y) : (p y ∘ map_path f q = q ∘ p x) % path.
-*)
 
 (* a category is an (∞,1)-category, where the hom-sets are actual sets. *)
 Class Category1 :=
@@ -282,47 +263,3 @@ Class StrictCategory :=
 }.
 
 Coercion strictcategory_category1 : StrictCategory >-> Category1.
-
-
-(* TODO 
-  Category with weak equivalences
-  Homotopical categories, f . g, g . h   => f, g, h, f . g . h
-  weak factorization schemes
-    orthogonal factorization schemes
-  Quillen model categories
-  In enriched categories over V `hom x y` is an object in V.
-  In internal categories over V `ob` as an object in V.
-  Build enrichment as enrichment over bicategories.
-  Then we can model the 'monoidal categories as bicategories of one object'
-*)
-
-
-
-Class Op (T:Type) :=
-{ op : T -> T
-; op_op : ∀ (x : T), op (op x) = x 
-}.
-
-(*
-Program Instance Category_Op : Op Category :=
-{ op := Op_Category
-}.
-Next Obligation. 
-  unfold Op_Category. 
-  unfold Op_Category_obligation_1.
-  unfold Op_Category_obligation_2.
-  simpl.
-  admit.
-
-Program Instance Groupoid_Op : Op Groupoid :=
-{ op := Op_Groupoid
-}.
-Obligation 1.
-  unfold Op_Groupoid.
-  unfold Op_Groupoid_obligation_1.
-  unfold Op_Groupoid_obligation_2.
-  unfold Op_Groupoid_obligation_3.
-  simpl.
-  admit.
-*) 
-
