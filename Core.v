@@ -211,13 +211,33 @@ Next Obligation. apply inverse_left_inverse. Defined.
 (* Probably the first novel development in this file *)
 Program Definition ap `(f : A -> B) := Build_Functor (Paths A) (Paths B) _ _ _ _.
 
-Program Definition transport `(P: A -> Type) := Build_Functor (Paths A) Sets_Category P _ _ _. 
+Program Definition transportF {A : Type} (P: A -> Type) := Build_Functor (Paths A) Sets_Category P _ _ _.
 
-Program Definition optransport `(P: A -> Type) := Build_Functor (Op_Category (Paths A)) Sets_Category P _ _ _.
+Program Definition transport {A : Type} (B : A -> Type) {x y : A} : (x = y) -> B x -> B y.
+Proof.
+  intros.
+  path_induction.
+  destruct H.
+  apply X.
+Defined.
+
+Program Definition apd {A : Type} {B : A -> Type} {x y : A} (f: ∀ (a: A), B a) (p: x = y) :
+  transport B p (f x) = f y := _.
+
+Program Definition optransportF `(P: A -> Type) := Build_Functor (Op_Category (Paths A)) Sets_Category P _ _ _.
+
+Program Definition optransport {A : Type} (B : A -> Type) {x y : A} : (x = y) -> B y -> B x.
+Proof.
+  intros.
+  path_induction.
+  destruct H.
+  apply X.
+Defined.
 
 Program Definition coe := Build_Functor (Paths Type) Sets_Category _ _ _ _.
 
 Program Definition opcoe := Build_Functor (Op_Category (Paths Type)) Sets_Category _ _ _ _.
+
 (* h-levels 0..2 *)
 Definition contractible (A : Type) := {x : A & ∀ y : A, y = x}.
 Definition prop (A : Type) := ∀ (x y : A), x = y.
@@ -225,7 +245,7 @@ Definition set (A : Type) := ∀ (x y : A), prop (x = y).
 
 Program Definition path_over `(B: A -> Type) `(p : x = y) (u : B x) (v : B y):= u = v.
 
-(* Paulin-Mohring J *)
+(* Paulin-Mohring J / based path induction *)
 Program Definition J 
   {A : Type}  (M : A) (C : ∀ (y : A), (paths M y) -> Type)
   (H : C M refl) (N : A) (P : paths M N) : C N P.
