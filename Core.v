@@ -5,6 +5,7 @@ Require Export Coq.Program.Tactics.
 Require Import Coq.Init.Datatypes.
 Require Import Coq.Init.Specif.
 
+
 Set Automatic Introduction.
 Set Implicit Arguments.
 Set Printing Projections.
@@ -28,8 +29,8 @@ Local Open Scope hom_scope.
 
 (** paths *)
 
-Inductive paths {A} : A → A → Type :=
-  refl : ∀ {a: A}, paths a a.
+Inductive paths {A} (a: A) : A → Type :=
+  refl : paths a a.
 
 Bind Scope path_scope with paths.
 
@@ -226,8 +227,8 @@ Program Definition path_over `(B: A -> Type) `(p : x = y) (u : B x) (v : B y):= 
 
 (* Paulin-Mohring J *)
 Program Definition J 
-  {A : Type}  (M : A) (C : ∀ (y : A), (@paths A M y) -> Type)
-  (H : C M refl) (N : A) (P : @paths A M N) : C N P.
+  {A : Type}  (M : A) (C : ∀ (y : A), (paths M y) -> Type)
+  (H : C M refl) (N : A) (P : paths M N) : C N P.
 Proof. path_induction. Defined.
 
 (* TODO: replace these with a comma category ? *)
