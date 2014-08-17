@@ -46,9 +46,9 @@ Ltac path_induction :=
      | [ p : @paths _ _ _ |- _ ] => destruct p
      | _ => idtac
      end
-  ); auto.
+  ).
 
-Local Obligation Tactic := program_simpl; path_induction.
+Local Obligation Tactic := program_simpl; path_induction; auto.
 
 (* An (∞, 1)-category / category up to coherent homotopy *)
 Class Category :=
@@ -262,7 +262,7 @@ Program Definition path_over `(B: A -> Type) `(p : x = y) (u : B x) (v : B y):= 
 Program Definition J 
   {A : Type}  (M : A) (C : ∀ (y : A), (paths M y) -> Type)
   (H : C M refl) (N : A) (P : paths M N) : C N P.
-Proof. path_induction. Defined.
+Proof. path_induction. auto. Defined.
 
 (* TODO: replace these with a comma category ? *)
 Definition fiber `(f : A -> B) (y : B) := { x : A & f x = y }.
@@ -276,24 +276,61 @@ Ltac contract_fiber y p :=
         intros [z q] 
   end.
 
+(*
+Higher Inductive circle : Type
+  := base : circle
+   | loop : base = base.
+*)
+
+Module Export circle.
+
+  Private Inductive circle : Type := | base : circle.
+  Axiom loop : base = base.
+
+  (* dependent elimination *)
+  Program Definition circle_ind (B: circle -> Type) (b : B base) (l : transport B loop b = b) (x : circle) : B x.
+  Proof.  
+    destruct x.
+    apply b.
+  Defined.
+
+  (* non-dependent elimination *)
+  Program Definition circle_rect (B : Type) (b : B) (l : b = b) : circle -> B.
+  Proof.
+   intros.
+   destruct H.
+   apply b.
+  Defined.
+
+End circle.
+
+
+
+
+
+
+
+
+
+
 (* a category is an (∞,1)-category, where the hom-sets are actual sets. *)
 Class Category1 :=
 { category1_category :> Category
-; hom_set : ∀ {x y}, set (x ~> y)
+; hom_set : ∀ {x y}, is_set (x ~> y)
 }.
 
 Coercion category1_category : Category1 >-> Category. 
 
 Class ThinCategory :=
 { thincategory_category1 :> Category1
-; hom_prop : ∀ {x y}, prop (x ~> y)
+; hom_prop : ∀ {x y}, is_prop (x ~> y)
 }.
 
 Coercion thincategory_category1 : ThinCategory >-> Category1. 
 
 Class StrictCategory :=
 { strictcategory_category1 :> Category1
-; ob_set : ∀ x, set x
+; ob_set : ∀ x, is_set x
 }.
 
 Coercion strictcategory_category1 : StrictCategory >-> Category1.
