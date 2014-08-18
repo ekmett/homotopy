@@ -3,6 +3,8 @@
 Require Import Coq.Unicode.Utf8_core.
 Require Import Coq.Program.Tactics.
 
+Module Export Main.
+
 Set Automatic Introduction.
 Set Implicit Arguments.
 Set Printing Projections.
@@ -93,17 +95,17 @@ Create HintDb hom discriminated.
 
 Infix "~>" := hom.
 Infix "~{ C }~>" := (hom C) (at level 90, right associativity).
-Infix "∘" := compose : morphism_scope.
+Infix "∘" := compose : hom_scope.
 
 Hint Resolve compose_assoc compose_assoc_op left_id right_id id_id.
 Hint Rewrite @left_id @right_id @id_id : category.
 Hint Rewrite @left_id @right_id @id_id : hom.
 
-Notation "1" := (id) : morphism_scope.
+Notation "1" := (id) : hom_scope.
 Notation "1" := (refl) : path_scope.
 Notation "1" := (refl') : based_path_scope.
 
-Open Scope morphism_scope.
+Open Scope hom_scope.
 Open Scope category_scope.
 
 Class is_groupoid {ob : Type} (hom : ob → ob → Type) :=
@@ -121,10 +123,10 @@ Record groupoid :=
 
 Notation "! p" := (inverse p) (at level 50) : hom_scope.
 
-Arguments inverse               [ob hom !C] x y f%hom : rename.
-Arguments inverse_inverse       [ob hom !C] x y f%hom : rename.
-Arguments inverse_left_inverse  [ob hom !C] x y f%hom : rename.
-Arguments inverse_right_inverse [ob hom !C] x y f%hom : rename.
+Arguments inverse               [ob hom !C x y] f%hom : rename.
+Arguments inverse_inverse       [ob hom !C x y] f%hom : rename.
+Arguments inverse_left_inverse  [ob hom !C x y] f%hom : rename.
+Arguments inverse_right_inverse [ob hom !C x y] f%hom : rename.
 
 Hint Resolve inverse_inverse inverse_left_inverse inverse_right_inverse.
 Hint Rewrite @inverse_inverse @inverse_left_inverse @inverse_right_inverse : category.
@@ -133,7 +135,7 @@ Hint Rewrite @inverse_inverse @inverse_left_inverse @inverse_right_inverse : pat
 
 (** types *)
 
-Definition types (x y : Type) := x -> y.
+Definition types (x y : Type) : Type := x -> y.
 Hint Unfold types.
 Program Instance types_is_category : is_category types.
 Definition Types : category := {| hom := types |}.
@@ -209,10 +211,10 @@ Arguments as_right_id [!C x y] f i H%hom : rename.
 
 Record functor (C: category) (D: category) :=
 { fobj :> C → D
-; map : ∀ {x y : C}, (x ~> y) → (fobj x ~> fobj y)
-; map_id : ∀ {x : C}, map (id (x := x)) = id
+; map : ∀ {x y : C}, (x ~> y) → fobj x ~> fobj y
+; map_id : ∀ {x : C}, map (id (x := x)) ~ id
 ; map_compose : ∀ {x y z : C} (f : y ~> z) (g : x ~> y),
-   map f ∘ map g = map (f ∘ g)
+   map f ∘ map g ~ map (f ∘ g)
 }.
 
 (* Opposite notions *)
@@ -243,7 +245,7 @@ Arguments op_is_category [ob] hom [C].
 Arguments op_is_groupoid [ob] hom [C].
 
 Definition Op (C : category) : category := 
-{| ob := @ob C
+{| ob := C
  ; hom := op (@hom C)
  ; category_is_category := op_is_category (@hom C)
  |}.
@@ -274,10 +276,30 @@ Defined.
 
 Program Definition coe := Build_functor (Paths Type) Types _ _ _ _.
 
+(*
+Program Definition gopf `(f : functor C D) { C' : is_groupoid C } := Build_functor (Op C) D f _ _ _.
+Next Obligation.
+  assert (L := inverse).
+  assert (C'' := @op_is_groupoid C _ C').
+  *)
+
+
+(*
 Program Definition opcoe := Build_functor (Op (Paths Type)) Types _ _ _ _.
+Next Obligation.
+  unfold opcoe_obligation_1.
+  destruct X.
+  apply id.
+Defined.
+Next Obligation.
+  intros.
+  unfold op.
+  unfold types_is_category_obligation_2.
+  unfold opcoe_obligation_2.
+Defined.
+*) 
 
 Program Definition based {A} := Build_functor (Paths A) (BasedPaths A) _ _ _ _.
-
 Program Definition debased {A} := Build_functor (BasedPaths A) (Paths A) _ _ _ _.
 
 (* h-levels 0..2 *)
@@ -293,13 +315,13 @@ Proof.
 Program Fixpoint is_level (n: nat) (A: Type) : Type :=
   match n with
   | O => is_contractible A
-  | S n => ∀ (x y: A), is_level n (@paths A x y)
+  | S n => ∀ (x y: A), is_level n (paths x y)
   end.
 
 Program Fixpoint n_path (n : nat) (A: Type) : Type :=
   match n with
   | O => ∀ (x y : A), x = y
-  | S n => ∀ (x y : A), n_path n (@paths A x y)
+  | S n => ∀ (x y : A), n_path n (paths x y)
   end.
 
 Definition contractible := { A : Type & is_contractible A }.
@@ -370,15 +392,15 @@ End circle.
 
 (* a 1-category is an (∞,1)-category, where the hom-sets are actual sets. *)
 Class is_category1 (C : category) := 
-{ category1_prop : ∀ {x y : C}, is_set (x ~> y)
+{ is_category1_prop : ∀ {x y : C}, is_set (x ~> y)
 }.
 
 Class is_thin (C : category) := 
-{ thin_prop : ∀ {x y : C}, is_prop (x ~> y)
+{ is_thin_prop : ∀ {x y : C}, is_prop (x ~> y)
 }.
 
 Class is_strict (C : category) := 
-{ strict_prop : is_set C
+{ is_strict_prop : is_set C
 }.
 
 (*
@@ -387,3 +409,6 @@ Proof. Admitted.
 
 Coercion thin_is_category1  : is_thin >-> is_category1.
 *)
+
+End Main.
+
