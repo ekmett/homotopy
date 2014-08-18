@@ -91,7 +91,6 @@ Bind Scope hom_scope with hom.
 Create HintDb category discriminated.
 Create HintDb hom discriminated.
 
-
 Infix "~>" := hom.
 Infix "~{ C }~>" := (hom C) (at level 90, right associativity).
 Infix "∘" := compose : morphism_scope.
@@ -144,8 +143,6 @@ Hint Unfold sets.
 Program Instance sets_is_category : is_category sets.
 Definition Sets : category := {| hom := sets |}.
 
-
-
 Definition fun_compose := compose (hom:=types).
 Infix "∘" := fun_compose : type_scope.
 
@@ -153,8 +150,6 @@ Infix "∘" := fun_compose : type_scope.
 
 Program Instance paths_is_category {A} : is_category (@paths A).
 Program Instance paths_is_groupoid {A} : is_groupoid (@paths A).
-Existing Instance paths_is_groupoid.
-Hint Resolve paths_is_groupoid.
 
 Definition path_compose {A} := compose (hom:=@paths A).
 Definition path_inverse {A} := inverse (hom:=@paths A).
