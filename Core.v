@@ -1,15 +1,7 @@
-(************************************************************************)
-(* Copyright 2014 Edward Kmett                                          *)
-(* BSD3                                                                 *)
-(************************************************************************)
-
 (* requires coq trunk newer than August 14th, 2014 *)
 
-Require Export Coq.Unicode.Utf8_core.
-Require Export Coq.Program.Tactics.
-Require Import Coq.Init.Datatypes.
-Require Import Coq.Init.Specif.
-
+Require Import Coq.Unicode.Utf8_core.
+Require Import Coq.Program.Tactics.
 
 Set Automatic Introduction.
 Set Implicit Arguments.
@@ -151,6 +143,8 @@ Definition sets (x y : Set) := x -> y.
 Hint Unfold sets.
 Program Instance sets_is_category : is_category sets.
 Definition Sets : category := {| hom := sets |}.
+
+
 
 Definition fun_compose := compose (hom:=types).
 Infix "∘" := fun_compose : type_scope.
