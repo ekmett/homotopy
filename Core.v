@@ -85,7 +85,7 @@ Bind Scope category_scope with is_category.
 
 Record category :=
 { ob  :> Type
-; hom : ob → ob → Type where "x ~> y" := (hom x y)
+; hom :> ob → ob → Type where "x ~> y" := (hom x y)
 ; category_is_category :> @is_category ob hom
 }.
 
@@ -101,7 +101,7 @@ Create HintDb hom discriminated.
 
 
 Infix "~>" := hom.
-Infix "~{ C }~>" := (hom (C := C)) (at level 90, right associativity).
+Infix "~{ C }~>" := (hom C) (at level 90, right associativity).
 Infix "∘" := compose : morphism_scope.
 
 Hint Resolve compose_assoc compose_assoc_op left_id right_id id_id.
@@ -145,12 +145,12 @@ Hint Rewrite @inverse_inverse @inverse_left_inverse @inverse_right_inverse : pat
 Definition types (x y : Type) := x -> y.
 Hint Unfold types.
 Program Instance types_is_category : is_category types.
-(* Definition Types : category := {| hom := types |}. *)
+Definition Types : category := {| hom := types |}.
 
 Definition sets (x y : Set) := x -> y.
 Hint Unfold sets.
 Program Instance sets_is_category : is_category sets.
-(* Definition Sets : category := {| hom := sets |}. *)
+Definition Sets : category := {| hom := sets |}.
 
 Definition fun_compose := compose (hom:=types).
 Infix "∘" := fun_compose : type_scope.
@@ -165,6 +165,8 @@ Hint Resolve paths_is_groupoid.
 Definition path_compose {A} := compose (hom:=@paths A).
 Definition path_inverse {A} := inverse (hom:=@paths A).
 
+Definition Paths A : category := {| hom := @paths A |}.
+
 Infix "∘" := path_compose : path_scope.
 Notation "! p" := (path_inverse p) (at level 50) : path_scope.
 
@@ -172,6 +174,8 @@ Notation "! p" := (path_inverse p) (at level 50) : path_scope.
 
 Program Instance based_paths_is_category A : is_category (@based_paths A).
 Program Instance based_paths_is_groupoid A : is_groupoid (@based_paths A).
+
+Definition BasedPaths A : category := {| hom := @paths A |}.
 
 Definition based_path_compose {A} := compose (hom:=@based_paths A).
 Definition based_path_inverse {A} := inverse (hom:=@based_paths A).
@@ -194,14 +198,12 @@ Section unique_id.
     apply (compose id0_right id1_left).
   Defined.
 
-
   Definition as_left_id {x y} (f : x ~> y) (i : y ~> y) (H : i ~ id) : i ∘ f ~ f.
   Proof.
     inversion H.
     subst.
     apply left_id.
   Defined.
-
 
   Definition as_right_id {x y} (f : x ~> y) (i : x ~> x) (H: i ~ id) : f ∘ i ~ f.
   Proof.
@@ -213,8 +215,8 @@ Section unique_id.
 End unique_id.
 
 Arguments unique_id [!C] f i H%hom id1_left id0_right : rename.
-Arguments as_left_id [!C] x y f i H%hom : rename.
-Arguments as_right_id [!C] x y f i H%hom : rename.
+Arguments as_left_id [!C x y] f i H%hom : rename.
+Arguments as_right_id [!C x y] f i H%hom : rename.
 
 Record functor (C: category) (D: category) :=
 { fobj :> C → D
@@ -251,10 +253,16 @@ Hint Unfold op.
 Arguments op_is_category [ob] hom [C].
 Arguments op_is_groupoid [ob] hom [C].
 
-(* Probably the first novel development in this file *)
-Program Definition ap `(f : A -> B) : functor (paths A) (paths B).
+Definition Op (C : category) : category := 
+{| ob := @ob C
+ ; hom := op (@hom C)
+ ; category_is_category := op_is_category (@hom C)
+ |}.
 
-Program Definition transportF {A : Type} (P: A -> Type) := Build_Functor (Paths A) Sets_Category P _ _ _.
+(* Probably the first novel development in this file *)
+Program Definition ap `(f : A -> B) := Build_functor (Paths A) (Paths B) _ _ _ _.
+
+Program Definition transportF {A : Type} (P: A -> Type) := Build_functor (Paths A) Types _ _ _ _.
 
 Program Definition transport {A : Type} (B : A -> Type) {x y : A} : (x = y) -> B x -> B y.
 Proof.
@@ -266,7 +274,7 @@ Defined.
 Program Definition apd {A : Type} {B : A -> Type} {x y : A} (f: ∀ (a: A), B a) (p: x = y) :
   transport B p (f x) = f y := _.
 
-Program Definition optransportF `(P: A -> Type) := Build_Functor (Op_Category (Paths A)) Sets_Category P _ _ _.
+Program Definition optransportF `(P: A -> Type) := Build_functor (Op (Paths A)) Types _ _ _ _.
 
 Program Definition optransport {A : Type} (B : A -> Type) {x y : A} : (x = y) -> B y -> B x.
 Proof.
@@ -275,18 +283,23 @@ Proof.
   apply X.
 Defined.
 
-Program Definition coe := Build_Functor (Paths Type) Sets_Category _ _ _ _.
+Program Definition coe := Build_functor (Paths Type) Types _ _ _ _.
 
-Program Definition opcoe := Build_Functor (Op_Category (Paths Type)) Sets_Category _ _ _ _.
+Program Definition opcoe := Build_functor (Op (Paths Type)) Types _ _ _ _.
 
-Program Definition based {A} := Build_Functor (Paths A) (BasedPaths A) _ _ _ _.
+Program Definition based {A} := Build_functor (Paths A) (BasedPaths A) _ _ _ _.
 
-Program Definition debased {A} := Build_Functor (BasedPaths A) (Paths A) _ _ _ _.
+Program Definition debased {A} := Build_functor (BasedPaths A) (Paths A) _ _ _ _.
 
 (* h-levels 0..2 *)
-Definition is_contractible (A : Type) := {x : A & ∀ y : A, y = x}.
-Definition is_prop (A : Type) := ∀ (x y : A), x = y.
-Definition is_set (A : Type) := ∀ (x y : A), is_prop (x = y).
+Definition is_contractible (A : Type) := {x : A & ∀ y : A, y ~ x}.
+Definition is_prop (A : Type) := ∀ (x y : A), x ~ y.
+Definition is_set (A : Type) := ∀ (x y : A), is_prop (x ~ y).
+
+(*
+Definition is_prop_implies_is_set (A : Type) (p : is_prop A): is_set A.
+Proof.
+*)
 
 Program Fixpoint is_level (n: nat) (A: Type) : Type :=
   match n with
@@ -304,6 +317,17 @@ Definition contractible := { A : Type & is_contractible A }.
 Definition prop := { A : Type & is_prop A }.
 Definition set := { A : Type & is_set A }.
 Definition level (n: nat) := {A : Type & is_level n A }.
+
+Definition contractible_Type (p : contractible) := projT1 p.
+Coercion contractible_Type : contractible >-> Sortclass.
+
+Definition prop_Type (p : prop) := projT1 p.
+Coercion prop_Type : prop >-> Sortclass.
+
+Definition set_Type (p : set) := projT1 p.
+Coercion set_Type : set >-> Sortclass.
+
+(* Definition sigT_Type {A: Type} {P: A → Type} (p : @sigT A P) := projT1 p. *)
 
 (* TODO: Hedberg's theorem showing types with decidable equalities are sets *)
 
@@ -355,33 +379,22 @@ Module Export circle.
 
 End circle.
 
-
-
-
-
-
-
-
-
-
-(* a category is an (∞,1)-category, where the hom-sets are actual sets. *)
-Class Category1 :=
-{ category1_category :> Category
-; hom_set : ∀ {x y}, is_set (x ~> y)
+(* a 1-category is an (∞,1)-category, where the hom-sets are actual sets. *)
+Class is_category1 (C : category) := 
+{ category1_prop : ∀ {x y : C}, is_set (x ~> y)
 }.
 
-Coercion category1_category : Category1 >-> Category.
-
-Class ThinCategory :=
-{ thincategory_category1 :> Category1
-; hom_prop : ∀ {x y}, is_prop (x ~> y)
+Class is_thin (C : category) := 
+{ thin_prop : ∀ {x y : C}, is_prop (x ~> y)
 }.
 
-Coercion thincategory_category1 : ThinCategory >-> Category1.
-
-Class StrictCategory :=
-{ strictcategory_category1 :> Category1
-; ob_set : ∀ x, is_set x
+Class is_strict (C : category) := 
+{ strict_prop : is_set C
 }.
 
-Coercion strictcategory_category1 : StrictCategory >-> Category1.
+(*
+Program Definition thin_is_category1 {C : category} (thin : is_thin C):  is_category1 C.
+Proof. Admitted.
+
+Coercion thin_is_category1  : is_thin >-> is_category1.
+*)
