@@ -181,7 +181,7 @@ Definition path_compose {A} := compose (C:=@Paths A).
 Definition path_inverse {A} := inverse (C:=@Paths A).
 
 Arguments path_compose [A x y z] f%hom g%hom.
-Arguments path_inverse [A x y] f%hom.
+Arguments path_inverse [A x y] f%hom : simpl nomatch.
 
 Infix "∘" := path_compose : path_scope.
 Notation "! p" := (path_inverse p) (at level 40) : path_scope.
@@ -647,6 +647,7 @@ Obligation 1.
 
 
 contract_fiber x (@refl _ x).
+
 
 
 
