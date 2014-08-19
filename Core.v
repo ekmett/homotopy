@@ -69,7 +69,7 @@ Record category :=
 ; id_id            : ∀ {x}, @id x ∘ @id x ~ @id x
 }.
 
-Arguments hom [!C] x y : rename. 
+Arguments hom [!C] x y : rename.
 
 Infix "~>" := hom.
 Infix "~{ C }~>" := (hom C) (at level 90, right associativity).
@@ -135,7 +135,7 @@ Infix "∘" := fun_compose : type_scope.
 
 (** Paths *)
 
-Program Definition Paths A : groupoid := 
+Program Definition Paths A : groupoid :=
 {| groupoid_category := {| hom := @paths A |} |}.
 
 Definition path_compose {A} := compose (C:=@Paths A).
@@ -204,22 +204,24 @@ Record functor (C: category) (D: category) :=
    map f ∘ map g ~ map (f ∘ g)
 }.
 
-Record > morphism (C: category) := 
-{ x : C
-; y : C
-; unpackage :> C x y 
-}.
-
-Program Definition fmap `(f : functor C D) (m : morphism C) : D (fobj f m.(x)) (fobj f m.(y)) := map f m.
- 
-Coercion fmap : functor >-> Funclass.
-
-
 Arguments map [C%category D%category] !F [x y] f%hom : rename.
 
-(* Coercion map : functor >-> Funclass. *)
+Record > morphism (C: category) :=
+{ morphism_x : C
+; morphism_y : C
+; morphism_f :> morphism_x ~> morphism_y
+}.
 
-(* Opposite notions *)
+Arguments Build_morphism [C x y] f%hom : rename.
+
+Program Definition path_morphism {A} {a b: A} (p : paths a b) : morphism (Paths A) := Build_morphism p.
+Coercion path_morphism : paths >-> morphism.
+
+Program Definition based_path_morphism {A} {a b: A} (p : based_paths a b) : morphism (BasedPaths A) := Build_morphism p.
+Coercion based_path_morphism : based_paths >-> morphism.
+
+Program Definition fmap `(f : functor C D) (m : morphism C) : D (fobj f m.(morphism_x)) (fobj f m.(morphism_y)) := map f m.
+Coercion fmap : functor >-> Funclass.
 
 Program Definition op (C : category) :=
 {| hom := λ (x y : C), C y x
@@ -233,17 +235,11 @@ Program Definition op_groupoid (C : groupoid) : groupoid :=
 |}.
 
 Program Definition contramap `(F : functor (op C) D) {x y : C} (f : C x y) := map F f.
-  
+
 (* Probably the first novel development in this file *)
-Program Definition aps `(f : A → B) := Build_functor (Paths A) (Paths B) f _ _ _.
+Program Definition ap `(f : A → B) := Build_functor (Paths A) (Paths B) f _ _ _.
 
-Definition ap {A B} (f : A -> B) {x y} (p : x ~ y) : f x ~ f y := map (aps f) p.
-Hint Unfold ap.
-
-Program Definition transports {A : Type} {P: A → Type} := Build_functor (Paths A) Types P _ _ _.
-
-Program Definition transport {A : Type} {P : A → Type} {x y: A} (p : x ~ y) : P x → P y := map transports p.
-Hint Unfold transport.
+Program Definition transport {A : Type} {P: A → Type} := Build_functor (Paths A) Types P _ _ _.
 
 Program Definition apd {A : Type} {P : A → Type} {x y : A} (f: ∀ (a: A), P a) (p: x ~ y) :
   transport p (f x) ~ f y := _.
@@ -339,7 +335,7 @@ Ltac contract_fiber y p :=
 Definition is_weq {A B} (f : A → B) := ∀ (y : B), is_contractible (fiber f y).
 Definition weq A B := { f : A → B & is_weq f }.
 
- 
+
 Ltac via x := apply @compose with (y := x).
 
 Ltac category_tricks :=
@@ -365,7 +361,7 @@ Proof.
   simpl in * |- *.
   induction p.
   unfold transport in q.
-  simpl in q.  
+  simpl in q.
   path_induction.
   auto.
 Defined.
@@ -406,15 +402,15 @@ Module Export circle.
 End circle.
 
 (* a 1-category is an (∞,1)-category, where the hom-sets are actual sets. *)
-Class is_category1 (C : category) := 
+Class is_category1 (C : category) :=
 { is_category1_prop : ∀ {x y : C}, is_set (x ~> y)
 }.
 
-Class is_thin (C : category) := 
+Class is_thin (C : category) :=
 { is_thin_prop : ∀ {x y : C}, is_prop (x ~> y)
 }.
 
-Class is_strict (C : category) := 
+Class is_strict (C : category) :=
 { is_strict_prop : is_set C
 }.
 
@@ -470,18 +466,18 @@ Obligation 1.
   assert (q' := inverse q).
   assert (qp := compose q' p).
   rapply existT.
-  - apply qp. 
+  - apply qp.
   - intros.
     path_induction.
-    
+
   assert (blah := projT2 p).
-  
+
 *)
 
 (*
 Program Definition opcoe := Build_functor (Op (Paths Type)) Types _ _ _ _.
 Next Obligation.
-  
+
   unfold opcoe_obligation_1.
   destruct X.
   apply id.
@@ -492,7 +488,7 @@ Next Obligation.
   unfold types_is_category_obligation_2.
   unfold opcoe_obligation_2.
 Defined.
-*) 
+*)
 (*
 Program Definition gopf `(f : functor C D) { C' : is_groupoid C } := Build_functor (Op C) D f _ _ _.
 Next Obligation.
@@ -507,11 +503,11 @@ Proof.
   induction p.
   via q.
   apply paths_is_category.
-  via (q ∘ ! id (x := f a)). 
+  via (q ∘ ! id (x := f a)).
   apply paths_is_category.
   via (q ∘ ! id (x := f x)).
-  
-   
+
+
 Program Definition weq_id {A} : weq A A := existT _ _ _.
 Next Obligation.
   unfold is_weq.
@@ -524,16 +520,16 @@ Next Obligation.
   apply y.
   apply refl.
   intros.
-   
+
 
 Program Instance weq_is_category : is_category weq.
 Obligation 1.
   rapply existT.
   apply (fun x => x).
-    
+
 
 contract_fiber x (@refl _ x).
-  
+
 
 
 Obligation 1.
@@ -541,4 +537,3 @@ Obligation 1.
 }.
 
   *)
-
