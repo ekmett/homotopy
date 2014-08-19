@@ -230,10 +230,10 @@ Section unique_id.
     (id0_right : ∀ x y (f : x ~> y), f ∘ id0 x ~ f)
     (x: C) : id0 x ~ id1 x :=
       id0_right x x (id1 x) ∘ id1_left x x (id0 x).
-  
+
   Definition as_left_id {x y} (f : x ~> y) (i : y ~> y) (H : i ~ id) : i ∘ f ~ f :=
     left_id f ∘ ap (λ i, i ∘ f) H.
-  
+
   Definition as_right_id {x y} (f : x ~> y) (i : x ~> x) (H: i ~ id) : f ∘ i ~ f :=
     right_id f ∘ ap (compose f) H.
 End unique_id.
@@ -279,10 +279,10 @@ Program Fixpoint n_path (n : nat) (A: Type) : Type :=
   | S n => ∀ (x y : A), n_path n (paths x y)
   end.
 
-Definition contractible := { A : Type & is_contractible A }.
-Definition prop := { A : Type & is_prop A }.
-Definition set := { A : Type & is_set A }.
-Definition level (n: nat) := {A : Type & is_level n A }.
+Definition contractible := sigT is_contractible.
+Definition prop := sigT is_prop.
+Definition set := sigT is_set.
+Definition level (n: nat) := sigT (is_level n).
 
 Definition contractible_Type (p : contractible) := projT1 p.
 Coercion contractible_Type : contractible >-> Sortclass.
@@ -292,6 +292,9 @@ Coercion prop_Type : prop >-> Sortclass.
 
 Definition set_Type (p : set) := projT1 p.
 Coercion set_Type : set >-> Sortclass.
+
+Definition level_Type {n} (p : level n) := projT1 p.
+Coercion level_Type : level >-> Sortclass.
 
 (* TODO: Hedberg's theorem showing types with decidable equalities are sets *)
 
