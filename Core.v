@@ -5,11 +5,11 @@ Require Import Coq.Program.Tactics.
 
 Set Automatic Introduction.
 Set Implicit Arguments.
-Set Printing Projections.
 (* Set Primitive Projections. *)
 Set Shrink Obligations.
-(* Set Universe Polymorphism. *)
-Generalizable All Variables.
+Set Universe Polymorphism.
+
+Generalizable Variables A B C D x y.
 
 Reserved Notation "x ~> y" (at level 90, right associativity).
 Reserved Notation "f ∘ g" (at level 45).
@@ -161,15 +161,17 @@ Infix "∘" := based_path_compose : based_path_scope.
 Notation "! p" := (based_path_inverse p) (at level 40) : based_path_scope.
 
 Record functor (C: category) (D: category) :=
-{ fobj : C → D
-; map : ∀ {x y : C}, (x ~> y) → fobj x ~> fobj y
+{ map_ob : C → D
+; map : ∀ {x y : C}, (x ~> y) → map_ob x ~> map_ob y
 ; map_id : ∀ {x : C}, map (id (x := x)) ~ id
 ; map_compose : ∀ {x y z : C} (f : y ~> z) (g : x ~> y),
    map f ∘ map g ~ map (f ∘ g)
 }.
 
+Arguments map_ob [C%category D%category] !F x : rename.
 Arguments map [C%category D%category] !F [x y] f%hom : rename.
 
+(* this hack lets us use a functor as its action on morphisms, rather than its action on objects *)
 Record > morphism (C: category) :=
 { morphism_x : C
 ; morphism_y : C
@@ -184,7 +186,7 @@ Coercion path_morphism : paths >-> morphism.
 Program Definition based_path_morphism {A} {a b: A} (p : based_paths a b) : morphism (BasedPaths A) := Build_morphism p.
 Coercion based_path_morphism : based_paths >-> morphism.
 
-Program Definition fmap `(f : functor C D) (m : morphism C) : D (fobj f m.(morphism_x)) (fobj f m.(morphism_y)) := map f m.
+Program Definition fmap `(f : functor C D) (m : morphism C) : D (map_ob f (morphism_x m)) (map_ob f (morphism_y m)) := map f m.
 Coercion fmap : functor >-> Funclass.
 
 Program Definition op (C : category) :=
