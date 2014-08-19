@@ -351,9 +351,25 @@ Defined.
 
 Definition weq_Type {A B : Type} (w : weq A B) : A → B := projT1 w.
 
+Section Nat.
 
+Program Definition id_functor (C : category) := Build_functor C C _ _ _ _.
 
-
+Program Definition compose_functor {C D E : category}
+  (G : functor D E) (F: functor C D) :=
+{| map_ob := λ x, map_ob G (map_ob F x)
+ ; map := λ x y f, map G (map F f)
+ |}.
+Obligation 1.
+  apply path_compose with (y := map G 1).
+  - apply map_id.
+  - apply (ap (λ g, map G g) (@map_id C D F x)).
+Defined.
+Next Obligation.
+  apply path_compose with (y := map G (map F f ∘ map F g)).
+  - apply (map (ap (λ g, map G g)) (@map_compose C D F x y z f g)).
+  - apply map_compose.
+Defined.
 
 (*
 Higher Inductive circle : Type
