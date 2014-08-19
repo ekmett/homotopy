@@ -259,7 +259,7 @@ End inverses.
 
 (* h-levels 0..2 *)
 Definition is_contractible (A : Type) := {x : A & ∀ y : A, y ~ x}.
-Definition is_prop (A : Type) := ∀ (x y: A), is_contractible (x ~ y).
+Definition is_prop (A : Type) := ∀ (x y : A), is_contractible (x ~ y).
 Definition is_set (A : Type)  := ∀ (x y : A), is_prop (x ~ y).
 
 (* Paulin-Mohring J / based path induction *)
