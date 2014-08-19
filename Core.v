@@ -54,7 +54,6 @@ Ltac path_induction :=
 
 Local Obligation Tactic := autounfold; program_simpl; path_induction; auto.
 
-
 (* an (∞,1)-category / category up to coherent homotopy *)
 
 Record category :=
@@ -226,35 +225,22 @@ Section unique_id.
   Variable C : category.
   Implicit Types x y : C.
 
-  Lemma unique_id (id0 id1 : ∀ x, x ~> x)
+  Definition unique_id (id0 id1 : ∀ x, x ~> x)
     (id1_left  : ∀ x y (f : x ~> y), f ~ id1 y ∘ f)
     (id0_right : ∀ x y (f : x ~> y), f ∘ id0 x ~ f)
-    : ∀ x, id0 x ~ id1 x.
-  Proof.
-    intro x.
-    apply (path_compose (id0_right x x (id1 x)) (id1_left x x (id0 x))).
-  Defined.
-
-  Definition as_left_id {x y} (f : x ~> y) (i : y ~> y) (H : i ~ id) : i ∘ f ~ f.
-  Proof.
-    apply path_compose with (y := 1 ∘ f).
-    - apply left_id.
-    - apply (ap (λ i, i ∘ f) H).
-  Defined.
-
-  Definition as_right_id {x y} (f : x ~> y) (i : x ~> x) (H: i ~ id) : f ∘ i ~ f.
-  Proof.
-    apply path_compose with (y := f ∘ 1).
-    - apply right_id.
-    - apply (ap (λ i, f ∘ i) H).
-  Defined.
+    (x: C) : id0 x ~ id1 x :=
+      id0_right x x (id1 x) ∘ id1_left x x (id0 x).
+  
+  Definition as_left_id {x y} (f : x ~> y) (i : y ~> y) (H : i ~ id) : i ∘ f ~ f :=
+    left_id f ∘ ap (λ i, i ∘ f) H.
+  
+  Definition as_right_id {x y} (f : x ~> y) (i : x ~> x) (H: i ~ id) : f ∘ i ~ f :=
+    right_id f ∘ ap (compose f) H.
 End unique_id.
 
 Arguments unique_id [C] f i H%hom id1_left id0_right : rename.
 Arguments as_left_id [C x y] f i H%hom : rename.
 Arguments as_right_id [C x y] f i H%hom : rename.
-
-
 
 Section inverses.
   Variable C : groupoid.
@@ -263,19 +249,12 @@ Section inverses.
   Variable f : C x y.
   Variable g : C y x.
 
-  Program Definition as_left_inverse (H : g ~ inverse f) : g ∘ f ~ id.
-  Proof.
-    apply path_compose with (y := inverse f ∘ f).
-    - apply (inverse_left_inverse f).
-    - apply (ap (λ g, compose g f) H).
-  Defined.
+  Program Definition as_left_inverse (H : g ~ inverse f) : g ∘ f ~ id :=
+    inverse_left_inverse f ∘ ap (λ g, g ∘ f) H.
 
-  Program Definition as_right_inverse (H : g ~ inverse f) : f ∘ g ~ id.
-  Proof.
-    apply path_compose with (y := f ∘ inverse f).
-    - apply (inverse_right_inverse f).
-    - apply (ap (compose f) H).
-  Defined.
+  Program Definition as_right_inverse (H : g ~ inverse f) : f ∘ g ~ id :=
+    inverse_right_inverse f ∘ ap (compose f) H.
+
 End inverses.
 
 (* h-levels 0..2 *)
