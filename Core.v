@@ -23,6 +23,8 @@ Delimit Scope based_path_scope with based_path.
 
 Local Open Scope hom_scope.
 
+(* TODO: set up a class for homs, then we can drop all the ob arguments ? *)
+
 (** (based) paths *)
 
 Inductive based_paths {A} (a: A) : A → Type :=
@@ -127,7 +129,7 @@ Record groupoid :=
 
 Existing Instance groupoid_is_groupoid.
 
-Notation "! p" := (inverse p) (at level 40) : hom_scope.
+Notation "! p" := (@inverse _ _ _ _ _ p) (at level 40) : hom_scope.
 
 Arguments inverse               [ob hom !C x y] f%hom : rename.
 Arguments inverse_inverse       [ob hom !C x y] f%hom : rename.
@@ -166,7 +168,7 @@ Definition Paths A : category := {| hom := @paths A |}.
 Hint Unfold Paths.
 
 Infix "∘" := path_compose : path_scope.
-Notation "! p" := (path_inverse p) (at level 40) : path_scope.
+Notation "! p" := (@path_inverse _ p _ _ ) (at level 40) : path_scope.
 
 (* based paths *)
 
@@ -213,10 +215,9 @@ Section unique_id.
 End unique_id.
 
 Arguments unique_id [!C] f i H%hom id1_left id0_right : rename.
-(*
 Arguments as_left_id [!C x y] f i H%hom : rename.
 Arguments as_right_id [!C x y] f i H%hom : rename.
-*)
+
 
 Record functor (C: category) (D: category) :=
 { fobj :> C → D
@@ -252,7 +253,9 @@ Section Op.
 
 End Op.
 
+
 Hint Unfold op.
+
 
 Arguments op_is_category [ob] hom [C].
 Arguments op_is_groupoid [ob] hom [C].
@@ -263,15 +266,30 @@ Definition Op (C : category) : category :=
  ; category_is_category := op_is_category (@hom C)
  |}.
 
-(* Probably the first novel development in this file *)
-Program Definition ap `(f : A → B) := Build_functor (Paths A) (Paths B) f _ _ _.
+Program Definition from_op {ob} {hom : ob -> ob -> Type} {x y} : op hom y x → hom x y := _.
+Program Definition to_op {ob} {hom : ob -> ob -> Type} {x y} : hom x y -> op hom y x := _.
 
-Program Definition transport {A : Type} {P: A → Type} := Build_functor (Paths A) Types P _ _ _.
+Program Definition contramap `(F : functor (Op C) D) {x y : C} (f : x ~> y) : F y ~> F x := map F (to_op f).
+  
+(* Probably the first novel development in this file *)
+Program Definition aps `(f : A → B) := Build_functor (Paths A) (Paths B) f _ _ _.
+
+Definition ap {A B} (f : A -> B) {x y} (p : x ~ y) : f x ~ f y := map (aps f) p.
+Hint Unfold ap.
+
+Program Definition transports {A : Type} {P: A → Type} := Build_functor (Paths A) Types P _ _ _.
+
+Definition transport {A : Type} {P : A → Type} {x y: A} (p : x ~ y) : P x → P y := map transports p.
+Hint Unfold transport.
 
 Program Definition apd {A : Type} {P : A → Type} {x y : A} (f: ∀ (a: A), P a) (p: x ~ y) :
-  map transport p (f x) ~ f y := _.
+  transport p (f x) ~ f y := _.
 
-Program Definition optransport {A: Type} {P: A → Type} := Build_functor (Op (Paths A)) Types _ _ _ _.
+(*
+Program Definition optransports {A: Type} {P: A → Type} := Build_functor (Op (Paths A)) Types P _ _ _.
+
+Definition optransport {A: Type} {P: A → Type} {x y: A} (p : x ~ y) : P y → P x := contramap optransports p.
+*)
 
 Program Definition coe := Build_functor (Paths Type) Types _ _ _ _.
 
@@ -295,7 +313,7 @@ Section inverses.
     apply compose with (y := !f ∘ f).
     - apply paths_is_category.
     - apply (inverse_left_inverse f).
-    - apply (map (ap (λ g, compose g f)) H).
+    - apply (ap (λ g, compose g f) H).
   Defined.
 
   Program Definition as_right_inverse (H : g ~ !f) : f ∘ g ~ id.
@@ -303,10 +321,9 @@ Section inverses.
     apply compose with (y := f ∘ !f).
     - apply paths_is_category.
     - apply (inverse_right_inverse f).
-    - apply (map (ap (λ g, compose f g)) H).
+    - apply (ap (compose f) H).
   Defined.
 End inverses.
-
 
 (* h-levels 0..2 *)
 Definition is_contractible (A : Type) := {x : A & ∀ y : A, y ~ x}.
@@ -371,7 +388,7 @@ Ltac category_tricks :=
   [ apply compose
   ].
 
-Program Definition opposite_ap A B (f: A -> B) (x y : A) (p : x ~ y) : ! map (ap f) p ~ map (ap f) (! p) := _.
+Program Definition opposite_ap A B (f: A -> B) (x y : A) (p : x ~ y) : inverse (ap f p) ~ ap f (inverse p) := _.
 
 (*
 Program Definition opposite_map `(f: functor C D) { gC : is_groupoid C}  { gD : is_groupoid D} {x y : C} (p : x ~> y) : ! map f p ~ map f (! p) := _.
@@ -388,22 +405,21 @@ Ltac path_tricks :=
   ].
 
 
-Lemma total_paths {A : Type} (P : A → Type) (x y : sigT P) (p : projT1 x ~ projT1 y) : (map transport p (projT2 x) ~ projT2 y) -> (x ~ y).
+Lemma total_paths {A : Type} (P : A → Type) (x y : sigT P) (p : projT1 x ~ projT1 y) : (transport p (projT2 x) ~ projT2 y) -> (x ~ y).
 Proof.
   intros q.
   destruct x as [x H].
   destruct y as [y G].
   simpl in * |- *.
   induction p.
+  unfold transport in q.
   simpl in q.  
   path_induction.
   auto.
 Defined.
 
 
-Definition weq_Type {A B} (w : weq A B) : A → B := projT1 w.
-(* Program Definition weq_types := Build_functor 
-*)
+Definition weq_Type {A B : Type} (w : weq A B) : A → B := projT1 w.
 
 
 
@@ -420,7 +436,7 @@ Module Export circle.
   Axiom loop : base ~ base.
 
   (* dependent elimination *)
-  Program Definition circle_ind (B: circle -> Type) (b : B base) (l : map transport loop b ~ b) (x : circle) : B x.
+  Program Definition circle_ind (B: circle -> Type) (b : B base) (l : transport loop b ~ b) (x : circle) : B x.
   Proof.
     destruct x.
     apply b.
@@ -479,8 +495,6 @@ Obligation 1.
   rapply existT.
   - apply (! p z ∘ p y).
   - intros.
-
-
 
 Program Definition is_prop_implies_is_set (A : Type) (p : is_prop A): is_set A := _.
 Obligation 1.
