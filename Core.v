@@ -196,14 +196,24 @@ Arguments unique_id [C] f i H%hom id1_left id0_right : rename.
 Arguments as_left_id [C x y] f i H%hom : rename.
 Arguments as_right_id [C x y] f i H%hom : rename.
 
-
 Record functor (C: category) (D: category) :=
-{ fobj :> C → D
+{ fobj : C → D
 ; map : ∀ {x y : C}, (x ~> y) → fobj x ~> fobj y
 ; map_id : ∀ {x : C}, map (id (x := x)) ~ id
 ; map_compose : ∀ {x y z : C} (f : y ~> z) (g : x ~> y),
    map f ∘ map g ~ map (f ∘ g)
 }.
+
+Record > morphism (C: category) := 
+{ x : C
+; y : C
+; unpackage :> C x y 
+}.
+
+Program Definition fmap `(f : functor C D) (m : morphism C) : D (fobj f m.(x)) (fobj f m.(y)) := map f m.
+ 
+Coercion fmap : functor >-> Funclass.
+
 
 Arguments map [C%category D%category] !F [x y] f%hom : rename.
 
@@ -222,7 +232,7 @@ Program Definition op_groupoid (C : groupoid) : groupoid :=
  ; inverse := λ x y, @inverse C y x
 |}.
 
-Program Definition contramap `(F : functor (op C) D) {x y : C} (f : x ~> y) : F y ~> F x := map F f.
+Program Definition contramap `(F : functor (op C) D) {x y : C} (f : C x y) := map F f.
   
 (* Probably the first novel development in this file *)
 Program Definition aps `(f : A → B) := Build_functor (Paths A) (Paths B) f _ _ _.
@@ -232,7 +242,7 @@ Hint Unfold ap.
 
 Program Definition transports {A : Type} {P: A → Type} := Build_functor (Paths A) Types P _ _ _.
 
-Definition transport {A : Type} {P : A → Type} {x y: A} (p : x ~ y) : P x → P y := map transports p.
+Program Definition transport {A : Type} {P : A → Type} {x y: A} (p : x ~ y) : P x → P y := map transports p.
 Hint Unfold transport.
 
 Program Definition apd {A : Type} {P : A → Type} {x y : A} (f: ∀ (a: A), P a) (p: x ~ y) :
