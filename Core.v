@@ -311,18 +311,12 @@ End inverses.
 (* h-levels 0..2 *)
 Definition is_contractible (A : Type) := {x : A & ∀ y : A, y ~ x}.
 Definition is_prop (A : Type) := ∀ (x y: A), is_contractible (x ~ y).
-(* Definition is_prop (A : Type) := ∀ (x y : A), x ~ y. *)
-
 Definition is_set (A : Type)  := ∀ (x y : A), is_prop (x ~ y).
 
 (* Paulin-Mohring J / based path induction *)
-Program Definition J'
+Program Definition J
   {A : Type}  (M : A) (C : ∀ (y : A), (based_paths M y) -> Type)
   (H : C M refl') (N : A) (P : based_paths M N) : C N P := _.
-
-Program Definition J
-  {A : Type}  (M : A) (C : ∀ (y : A), (@paths A M y) -> Type)
-  (H : C M refl) (N : A) (P : @paths A M N) : C N P := _.
 
 Program Fixpoint is_level (n: nat) (A: Type) : Type :=
   match n with
@@ -379,9 +373,13 @@ Ltac category_tricks :=
 
 Program Definition opposite_ap A B (f: A -> B) (x y : A) (p : x ~ y) : ! map (ap f) p ~ map (ap f) (! p) := _.
 
+(*
 Program Definition opposite_map `(f: functor C D) { gC : is_groupoid C}  { gD : is_groupoid D} {x y : C} (p : x ~> y) : ! map f p ~ map f (! p) := _.
 Obligation 1.
-  
+  *)
+
+
+ 
 
 Ltac path_tricks :=
   first
@@ -404,9 +402,8 @@ Defined.
 
 
 Definition weq_Type {A B} (w : weq A B) : A → B := projT1 w.
-Program Definition weq_types := Build_functor 
-Coercion weq_Type : weq >-> Funclass.
-
+(* Program Definition weq_types := Build_functor 
+*)
 
 
 
@@ -423,7 +420,7 @@ Module Export circle.
   Axiom loop : base ~ base.
 
   (* dependent elimination *)
-  Program Definition circle_ind (B: circle -> Type) (b : B base) (l : map (transport B) loop b ~ b) (x : circle) : B x.
+  Program Definition circle_ind (B: circle -> Type) (b : B base) (l : map transport loop b ~ b) (x : circle) : B x.
   Proof.
     destruct x.
     apply b.
