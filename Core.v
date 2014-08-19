@@ -5,11 +5,45 @@ Require Import Coq.Program.Tactics.
 
 Set Automatic Introduction.
 Set Implicit Arguments.
-(* Set Primitive Projections. *)
 Set Shrink Obligations.
 Set Universe Polymorphism.
 
 Generalizable Variables A B C D x y.
+
+(* World Building *)
+
+Section Relations.
+
+(* We had to give up the stock relations because of HoTT and prop abuse with large indices being incompatible
+   so we redefine them here. 
+*)
+
+Definition relation (A : Type) := A -> A -> Type.
+
+Class Reflexive {A} (R : relation A) :=
+  reflexivity : forall x : A, R x x.
+
+Class Symmetric {A} (R : relation A) :=
+  symmetry : forall x y, R x y -> R y x.
+
+Class Transitive {A} (R : relation A) :=
+  transitivity : forall x y z, R x y -> R y z -> R x z.
+
+(** A [PreOrder] is both Reflexive and Transitive. *)
+Class PreOrder {A} (R : relation A) :=
+  { PreOrder_Reflexive :> Reflexive R | 2 ;
+    PreOrder_Transitive :> Transitive R | 2 }.
+
+End Relations.
+
+Tactic Notation "etransitivity" open_constr(y) :=
+  let R := match goal with |- ?R ?x ?z => constr:(R) end in
+  let x := match goal with |- ?R ?x ?z => constr:(x) end in
+  let z := match goal with |- ?R ?x ?z => constr:(z) end in
+  refine (@transitivity _ R _ x y z _ _).
+
+Tactic Notation "etransitivity" := etransitivity _.
+
 
 Reserved Notation "x ~> y" (at level 90, right associativity).
 Reserved Notation "f ∘ g" (at level 45).
@@ -68,9 +102,9 @@ Record category :=
 ; id_id            : ∀ {x}, @id x ∘ @id x ~ @id x
 }.
 
-Arguments hom [!C] x y : rename.
+Arguments hom C x y : rename.
 
-Infix "~>" := hom.
+Infix "~>" := (hom _).
 Infix "~{ C }~>" := (hom C) (at level 90, right associativity).
 
 Bind Scope category_scope with category.
@@ -82,6 +116,9 @@ Arguments id [C x] : rename.
 Arguments right_id [C x y] f%hom : rename.
 Arguments left_id [C x y] f%hom : rename.
 Arguments id_id [C x] : rename.
+
+Program Instance category_reflexive {C : category} : Reflexive C := @id C.
+Program Instance category_transitive {C : category} : Transitive C := λ x y z f g, @compose C x y z g f.
 
 Bind Scope hom_scope with hom.
 
@@ -105,19 +142,22 @@ Open Scope hom_scope.
 Open Scope category_scope.
 
 Record groupoid  :=
-{ groupoid_category :> category
+Build_groupoid { groupoid_category :> category
 ; inverse : ∀ {x y}, (x ~> y) → (y ~> x)
 ; inverse_inverse : ∀ {x y} (f : x ~> y), inverse (inverse f) ~ f
 ; inverse_left_inverse : ∀ {x y} (f : x ~> y), inverse f ∘ f ~ id
 ; inverse_right_inverse : ∀ {x y : groupoid_category} (f : x ~> y), f ∘ inverse f ~ id
 }.
 
+
 Notation "! p" := (@inverse _ _ _ _ _ p) (at level 40) : hom_scope.
 
-Arguments inverse               [C x y] f%hom : rename.
+Arguments inverse               [C x y] f%hom : rename, simpl nomatch.
 Arguments inverse_inverse       [C x y] f%hom : rename.
 Arguments inverse_left_inverse  [C x y] f%hom : rename.
 Arguments inverse_right_inverse [C x y] f%hom : rename.
+
+Program Instance groupoid_symmetric {C : groupoid} : Symmetric C := @inverse C.
 
 Hint Resolve inverse_inverse inverse_left_inverse inverse_right_inverse.
 Hint Rewrite inverse_inverse inverse_left_inverse inverse_right_inverse : category.
@@ -207,12 +247,13 @@ Program Definition ap `(f : A → B) := Build_functor (Paths A) (Paths B) f _ _ 
 
 Program Definition transport {A : Type} {P: A → Type} := Build_functor (Paths A) Types P _ _ _.
 
+Notation "p # x" := (map transport p x) (right associativity, at level 65, only parsing).
+
 Program Definition apd {A : Type} {P : A → Type} {x y : A} (f: ∀ (a: A), P a) (p: x ~ y) :
-  transport p (f x) ~ f y := _.
+  p # f x ~ f y := _.
 
 (*
 Program Definition optransports {A: Type} {P: A → Type} := Build_functor (Op (Paths A)) Types P _ _ _.
-
 Definition optransport {A: Type} {P: A → Type} {x y: A} (p : x ~ y) : P y → P x := contramap optransports p.
 *)
 
@@ -335,9 +376,8 @@ Ltac path_tricks :=
   ].
 *)
 
-Lemma total_paths {A : Type} (P : A → Type) (x y : sigT P) (p : projT1 x ~ projT1 y) : (transport p (projT2 x) ~ projT2 y) -> (x ~ y).
+Lemma total_paths {A : Type} (P : A → Type) (x y : sigT P) (p : projT1 x ~ projT1 y) (q : p # projT2 x ~ projT2 y) : x ~ y.
 Proof.
-  intros q.
   destruct x as [x H].
   destruct y as [y G].
   simpl in * |- *.
@@ -349,9 +389,65 @@ Proof.
 Defined.
 
 
+(*
+Section category_eq.
+  Variable C D  : category.
+  Variable obs  : ob C ~ ob D.
+
+  Definition transport_hom := transport (P := fun x => x -> x -> Type) obs.
+
+  Definition homC' := transport_hom (hom C).
+  Variable homs : homC' ~ hom D.
+
+  Record Hom := { obH : Type; homH : obH -> obH -> Type }.
+
+  Definition transport_id := transport (P := λ hom, ∀ (x : ob C), hom x x) homs.
+
+  Check transport_id.
+
+  Definition ids : transport_idtransport (@id C) ~ @id D.
+
+transport (P := λ O, ∀ (x : O), hom C x x) obs (
+
+  Check transport_id.
+  Variable idC' := transport_id (@id C).
+
+
+  Variable ids : transport_id (@id C) ~ @id D.
+
+
+  Variable ids  : @id C ~ @id D.
+
+
+End category_eq.
+ *)
+
+(*
+Record category :=
+{ ob               :> Type
+; hom              :> ob -> ob -> Type where "x ~> y" := (hom x y)
+; id               : ∀ {x}, x ~> x
+; compose          : ∀ {x y z}, (y ~> z) → (x ~> y) → (x ~> z) where "f ∘ g" := (compose f g)
+; compose_assoc    : ∀ {w x y z} (f : y ~> z) (g : x ~> y) (h : w ~> x), f ∘ (g ∘ h) ~ (f ∘ g) ∘ h
+; compose_assoc_op : ∀ {w x y z} (f : y ~> z) (g : x ~> y) (h : w ~> x), (f ∘ g) ∘ h ~ f ∘ (g ∘ h)
+; right_id         : ∀ {x y} (f : x ~> y), f ∘ @id x ~ f
+; left_id          : ∀ {x y} (f : x ~> y), @id y ∘ f ~ f
+; id_id            : ∀ {x}, @id x ∘ @id x ~ @id x
+}.
+*)
+
+
 Definition weq_Type {A B : Type} (w : weq A B) : A → B := projT1 w.
 
-Section Nat.
+(*
+Record functor (C: category) (D: category) :=
+{ map_ob : C → D
+; map : ∀ {x y : C}, (x ~> y) → map_ob x ~> map_ob y
+; map_id : ∀ {x : C}, map (id (x := x)) ~ id
+; map_compose : ∀ {x y z : C} (f : y ~> z) (g : x ~> y),
+   map f ∘ map g ~ map (f ∘ g)
+}.
+*)
 
 Program Definition id_functor (C : category) := Build_functor C C _ _ _ _.
 
@@ -371,11 +467,34 @@ Next Obligation.
   - apply map_compose.
 Defined.
 
+Program Definition id_id_functor {C} : compose_functor (id_functor C) (id_functor C) ~ id_functor C := _.
+
+Program Definition eta `(f : A -> B) : f ~ (λ x, f x) := _.
+
+(*
+Program Definition right_id_functor `(f : functor C D) : compose_functor f (id_functor C) ~ f := _.
+Obligation 1.
+  unfold compose_functor.
+  unfold id_functor.
+  unfold id_functor_obligation_1.
+  unfold id_functor_obligation_2.
+  unfold id_functor_obligation_3.
+  unfold id_functor_obligation_4.
+  unfold compose_functor_obligation_1.
+  unfold compose_functor_obligation_2.
+  simpl.
+
+
+Abort right_id_functor.
+*)
+
+
 (*
 Higher Inductive circle : Type
   := base : circle
    | loop : base = base.
 *)
+
 
 Module Export circle.
 
