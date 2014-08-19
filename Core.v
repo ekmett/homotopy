@@ -97,8 +97,8 @@ Infix "~{ C }~>" := (hom C) (at level 90, right associativity).
 Infix "∘" := compose : hom_scope.
 
 Hint Resolve compose_assoc compose_assoc_op left_id right_id id_id.
-Hint Rewrite @left_id @right_id @id_id : category.
-Hint Rewrite @left_id @right_id @id_id : hom.
+Hint Rewrite left_id right_id @id_id : category.
+Hint Rewrite left_id right_id @id_id : hom.
 
 Notation "1" := (id) : hom_scope.
 
