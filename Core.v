@@ -188,7 +188,7 @@ Program Definition fmap `(f : functor C D) (m : morphism C) : D (fobj f m.(morph
 Coercion fmap : functor >-> Funclass.
 
 Program Definition op (C : category) :=
-{| hom := λ (x y : C), C y x
+{| hom := λ x y, C y x
  ; id  := @id C
  ; compose := λ _ _ _ f g, compose (C := C) g f
 |}.
@@ -390,6 +390,7 @@ Class is_thin (C : category) :=
 Class is_strict (C : category) :=
 { is_strict_prop : is_set C
 }.
+
 
 (*
 Program Definition thin_is_category1 {C : category} (thin : is_thin C):  is_category1 C.
