@@ -111,7 +111,7 @@ Open Scope hom_scope.
 Open Scope category_scope.
 
 Class is_groupoid {ob : Type} (hom : ob → ob → Type) :=
-{ is_groupoid_is_category :> is_category hom where "x ~> y" := (hom x y)
+{ is_groupoid_is_category :> is_category hom | 2 where "x ~> y" := (hom x y)
 ; inverse : ∀ {x y : ob}, (x ~> y) → (y ~> x)
 ; inverse_inverse : ∀ {x y : ob} (f : x ~> y), inverse (inverse f) ~ f
 ; inverse_left_inverse : ∀ {x y : ob} (f : x ~> y), inverse f ∘ f ~ id
@@ -420,6 +420,7 @@ Defined.
 
 
 Definition weq_Type {A B : Type} (w : weq A B) : A → B := projT1 w.
+
 
 
 
