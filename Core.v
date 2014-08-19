@@ -161,41 +161,6 @@ Arguments based_path_inverse [A x y] f%hom.
 Infix "∘" := based_path_compose : based_path_scope.
 Notation "! p" := (based_path_inverse p) (at level 40) : based_path_scope.
 
-Section unique_id.
-  Variable C : category.
-  Implicit Types x y : C.
-
-  Lemma unique_id (id0 id1 : ∀ x, x ~> x)
-    (id1_left  : ∀ x y (f : x ~> y), f ~ id1 y ∘ f)
-    (id0_right : ∀ x y (f : x ~> y), f ∘ id0 x ~ f)
-    : ∀ x, id0 x ~ id1 x.
-  Proof.
-    intro x.
-    specialize (id1_left x x (id0 x)).
-    specialize (id0_right x x (id1 x)).
-    apply (path_compose id0_right id1_left).
-  Defined.
-
-  (* TODO: avoid inversion? *)
-  Definition as_left_id {x y} (f : x ~> y) (i : y ~> y) (H : i ~ id) : i ∘ f ~ f.
-  Proof.
-    inversion H.
-    subst.
-    apply left_id.
-  Defined.
-
-  Definition as_right_id {x y} (f : x ~> y) (i : x ~> x) (H: i ~ id) : f ∘ i ~ f.
-  Proof.
-    inversion H.
-    subst.
-    apply right_id.
-  Defined.
-End unique_id.
-
-Arguments unique_id [C] f i H%hom id1_left id0_right : rename.
-Arguments as_left_id [C x y] f i H%hom : rename.
-Arguments as_right_id [C x y] f i H%hom : rename.
-
 Record functor (C: category) (D: category) :=
 { fobj : C → D
 ; map : ∀ {x y : C}, (x ~> y) → fobj x ~> fobj y
@@ -256,6 +221,39 @@ Program Definition base {A} {P : A → Type} {u v : sigT P} := Build_functor (Pa
 
 Program Definition based {A} := Build_functor (Paths A) (BasedPaths A) _ _ _ _.
 Program Definition debased {A} := Build_functor (BasedPaths A) (Paths A) _ _ _ _.
+
+Section unique_id.
+  Variable C : category.
+  Implicit Types x y : C.
+
+  Lemma unique_id (id0 id1 : ∀ x, x ~> x)
+    (id1_left  : ∀ x y (f : x ~> y), f ~ id1 y ∘ f)
+    (id0_right : ∀ x y (f : x ~> y), f ∘ id0 x ~ f)
+    : ∀ x, id0 x ~ id1 x.
+  Proof.
+    intro x.
+    apply (path_compose (id0_right x x (id1 x)) (id1_left x x (id0 x))).
+  Defined.
+
+  Definition as_left_id {x y} (f : x ~> y) (i : y ~> y) (H : i ~ id) : i ∘ f ~ f.
+  Proof.
+    apply path_compose with (y := 1 ∘ f).
+    - apply left_id.
+    - apply (ap (λ i, i ∘ f) H).
+  Defined.
+
+  Definition as_right_id {x y} (f : x ~> y) (i : x ~> x) (H: i ~ id) : f ∘ i ~ f.
+  Proof.
+    apply path_compose with (y := f ∘ 1).
+    - apply right_id.
+    - apply (ap (λ i, f ∘ i) H).
+  Defined.
+End unique_id.
+
+Arguments unique_id [C] f i H%hom id1_left id0_right : rename.
+Arguments as_left_id [C x y] f i H%hom : rename.
+Arguments as_right_id [C x y] f i H%hom : rename.
+
 
 
 Section inverses.
