@@ -220,6 +220,10 @@ Record functor (C: category) (D: category) :=
    map f ∘ map g ~ map (f ∘ g)
 }.
 
+Arguments map [C%category D%category] F [x y] f%hom : rename.
+
+Coercion map : functor >-> Funclass.
+
 (* Opposite notions *)
 
 Section Op.
@@ -256,16 +260,12 @@ Definition Op (C : category) : category :=
 (* Probably the first novel development in this file *)
 Program Definition ap `(f : A -> B) := Build_functor (Paths A) (Paths B) _ _ _ _.
 
-Program Definition transportF {A : Type} (P: A -> Type) := Build_functor (Paths A) Types _ _ _ _.
-
-Program Definition transport {A : Type} (B : A -> Type) {x y : A} (H : x ~ y) : B x -> B y := _.
+Program Definition transport {A : Type} (B: A -> Type) := Build_functor (Paths A) Types B _ _ _.
 
 Program Definition apd {A : Type} {B : A -> Type} {x y : A} (f: ∀ (a: A), B a) (p: x ~ y) :
-  transport B p (f x) ~ f y := _.
+  map (transport B) p (f x) ~ f y := _.
 
-Program Definition optransportF `(P: A -> Type) := Build_functor (Op (Paths A)) Types _ _ _ _.
-
-Program Definition optransport {A : Type} (B : A -> Type) {x y : A} : (x ~ y) -> B y -> B x := _.
+Program Definition optransport `(P: A -> Type) := Build_functor (Op (Paths A)) Types _ _ _ _.
 
 Program Definition coe := Build_functor (Paths Type) Types _ _ _ _.
 
