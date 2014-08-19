@@ -3,14 +3,12 @@
 Require Import Coq.Unicode.Utf8_core.
 Require Import Coq.Program.Tactics.
 
-Module Export Main.
-
 Set Automatic Introduction.
 Set Implicit Arguments.
 Set Printing Projections.
 (* Set Primitive Projections. *)
 Set Shrink Obligations.
-Set Universe Polymorphism.
+(* Set Universe Polymorphism. *)
 Generalizable All Variables.
 
 Reserved Notation "x ~> y" (at level 90, right associativity).
@@ -101,8 +99,11 @@ Hint Rewrite @left_id @right_id @id_id : category.
 Hint Rewrite @left_id @right_id @id_id : hom.
 
 Notation "1" := (id) : hom_scope.
+
+(*
 Notation "1" := (refl) : path_scope.
 Notation "1" := (refl') : based_path_scope.
+*)
 
 Open Scope hom_scope.
 Open Scope category_scope.
@@ -115,12 +116,18 @@ Class is_groupoid {ob : Type} (hom : ob → ob → Type) :=
 ; inverse_right_inverse : ∀ {x y : ob} (f : x ~> y), f ∘ inverse f ~ id
 }.
 
+Coercion is_groupoid_is_category : is_groupoid >-> is_category.
+
 Record groupoid :=
 { groupoid_category :> @category
-; groupoid_is_groupoid : is_groupoid (hom (C := groupoid_category))
+; groupoid_is_groupoid :> is_groupoid (hom (C := groupoid_category))
 }.
 
-Notation "! p" := (inverse p) (at level 50) : hom_scope.
+(* ; commutes : category_is_category groupoid_category ~ is_groupoid_is_category groupoid_is_groupoid *)
+
+Existing Instance groupoid_is_groupoid.
+
+Notation "! p" := (inverse p) (at level 40) : hom_scope.
 
 Arguments inverse               [ob hom !C x y] f%hom : rename.
 Arguments inverse_inverse       [ob hom !C x y] f%hom : rename.
@@ -156,9 +163,10 @@ Definition path_compose {A} := compose (hom:=@paths A).
 Definition path_inverse {A} := inverse (hom:=@paths A).
 
 Definition Paths A : category := {| hom := @paths A |}.
+Hint Unfold Paths.
 
 Infix "∘" := path_compose : path_scope.
-Notation "! p" := (path_inverse p) (at level 50) : path_scope.
+Notation "! p" := (path_inverse p) (at level 40) : path_scope.
 
 (* based paths *)
 
@@ -171,7 +179,7 @@ Definition based_path_compose {A} := compose (hom:=@based_paths A).
 Definition based_path_inverse {A} := inverse (hom:=@based_paths A).
 
 Infix "∘" := based_path_compose : based_path_scope.
-Notation "! p" := (based_path_inverse p) (at level 50) : based_path_scope.
+Notation "! p" := (based_path_inverse p) (at level 40) : based_path_scope.
 
 Section unique_id.
   Variable C : category.
@@ -188,7 +196,6 @@ Section unique_id.
     apply (compose id0_right id1_left).
   Defined.
 
-(*
   (* TODO: avoid inversion? *)
   Definition as_left_id {x y} (f : x ~> y) (i : y ~> y) (H : i ~ id) : i ∘ f ~ f.
   Proof.
@@ -203,7 +210,6 @@ Section unique_id.
     subst.
     apply right_id.
   Defined.
-*)
 End unique_id.
 
 Arguments unique_id [!C] f i H%hom id1_left id0_right : rename.
@@ -220,9 +226,9 @@ Record functor (C: category) (D: category) :=
    map f ∘ map g ~ map (f ∘ g)
 }.
 
-Arguments map [C%category D%category] F [x y] f%hom : rename.
+Arguments map [C%category D%category] !F [x y] f%hom : rename.
 
-Coercion map : functor >-> Funclass.
+(* Coercion map : functor >-> Funclass. *)
 
 (* Opposite notions *)
 
@@ -258,52 +264,65 @@ Definition Op (C : category) : category :=
  |}.
 
 (* Probably the first novel development in this file *)
-Program Definition ap `(f : A -> B) := Build_functor (Paths A) (Paths B) _ _ _ _.
+Program Definition ap `(f : A → B) := Build_functor (Paths A) (Paths B) f _ _ _.
 
-Program Definition transport {A : Type} (B: A -> Type) := Build_functor (Paths A) Types B _ _ _.
+Program Definition transport {A : Type} {P: A → Type} := Build_functor (Paths A) Types P _ _ _.
 
-Program Definition apd {A : Type} {B : A -> Type} {x y : A} (f: ∀ (a: A), B a) (p: x ~ y) :
-  map (transport B) p (f x) ~ f y := _.
+Program Definition apd {A : Type} {P : A → Type} {x y : A} (f: ∀ (a: A), P a) (p: x ~ y) :
+  map transport p (f x) ~ f y := _.
 
-Program Definition optransport `(P: A -> Type) := Build_functor (Op (Paths A)) Types _ _ _ _.
+Program Definition optransport {A: Type} {P: A → Type} := Build_functor (Op (Paths A)) Types _ _ _ _.
 
 Program Definition coe := Build_functor (Paths Type) Types _ _ _ _.
 
-(*
-Program Definition gopf `(f : functor C D) { C' : is_groupoid C } := Build_functor (Op C) D f _ _ _.
-Next Obligation.
-  assert (L := inverse).
-  assert (C'' := @op_is_groupoid C _ C').
-  *)
-
-
-(*
-Program Definition opcoe := Build_functor (Op (Paths Type)) Types _ _ _ _.
-Next Obligation.
-  unfold opcoe_obligation_1.
-  destruct X.
-  apply id.
-Defined.
-Next Obligation.
-  intros.
-  unfold op.
-  unfold types_is_category_obligation_2.
-  unfold opcoe_obligation_2.
-Defined.
-*) 
+Program Definition base {A} {P : A → Type} {u v : sigT P} := Build_functor (Paths A) Types _ _ _ _.
 
 Program Definition based {A} := Build_functor (Paths A) (BasedPaths A) _ _ _ _.
 Program Definition debased {A} := Build_functor (BasedPaths A) (Paths A) _ _ _ _.
 
+
+Section inverses.
+  Variable ob : Type.
+  Variable hom : ob -> ob -> Type.
+  Variable C : is_groupoid hom.
+
+  Variable x y : ob.
+  Variable f : hom x y.
+  Variable g : hom y x.
+
+  Program Definition as_left_inverse (H : g ~ !f) : g ∘ f ~ id.
+  Proof.
+    apply compose with (y := !f ∘ f).
+    - apply paths_is_category.
+    - apply (inverse_left_inverse f).
+    - apply (map (ap (λ g, compose g f)) H).
+  Defined.
+
+  Program Definition as_right_inverse (H : g ~ !f) : f ∘ g ~ id.
+  Proof.
+    apply compose with (y := f ∘ !f).
+    - apply paths_is_category.
+    - apply (inverse_right_inverse f).
+    - apply (map (ap (λ g, compose f g)) H).
+  Defined.
+End inverses.
+
+
 (* h-levels 0..2 *)
 Definition is_contractible (A : Type) := {x : A & ∀ y : A, y ~ x}.
-Definition is_prop (A : Type) := ∀ (x y : A), x ~ y.
-Definition is_set (A : Type) := ∀ (x y : A), is_prop (x ~ y).
+Definition is_prop (A : Type) := ∀ (x y: A), is_contractible (x ~ y).
+(* Definition is_prop (A : Type) := ∀ (x y : A), x ~ y. *)
 
-(*
-Definition is_prop_implies_is_set (A : Type) (p : is_prop A): is_set A.
-Proof.
-*)
+Definition is_set (A : Type)  := ∀ (x y : A), is_prop (x ~ y).
+
+(* Paulin-Mohring J / based path induction *)
+Program Definition J'
+  {A : Type}  (M : A) (C : ∀ (y : A), (based_paths M y) -> Type)
+  (H : C M refl') (N : A) (P : based_paths M N) : C N P := _.
+
+Program Definition J
+  {A : Type}  (M : A) (C : ∀ (y : A), (@paths A M y) -> Type)
+  (H : C M refl) (N : A) (P : @paths A M N) : C N P := _.
 
 Program Fixpoint is_level (n: nat) (A: Type) : Type :=
   match n with
@@ -331,28 +350,66 @@ Coercion prop_Type : prop >-> Sortclass.
 Definition set_Type (p : set) := projT1 p.
 Coercion set_Type : set >-> Sortclass.
 
-(* Definition sigT_Type {A: Type} {P: A → Type} (p : @sigT A P) := projT1 p. *)
-
 (* TODO: Hedberg's theorem showing types with decidable equalities are sets *)
 
 Program Definition path_over `(B: A -> Type) `(p : x ~ y) (u : B x) (v : B y):= u ~ v.
 
-(* Paulin-Mohring J / based path induction *)
-Program Definition J
-  {A : Type}  (M : A) (C : ∀ (y : A), (based_paths M y) -> Type)
-  (H : C M refl') (N : A) (P : based_paths M N) : C N P := _.
-
 (* TODO: replace these with a comma category ? *)
-Definition fiber `(f : A -> B) (y : B) := { x : A & f x ~ y }.
+Definition fiber `(f : A → B) (y : B) := { x : A & f x ~ y }.
 
 Ltac contract_fiber y p :=
   match goal with
-  | [ |- contractible (@fiber _ _ ?f ?x) ] =>
-    eexists (existT (fun z => f z = x) y p);
+  | [ |- is_contractible (@fiber _ _ ?f ?x) ] =>
+    eexists (existT (fun z => f z ~ x) y p);
       let z := fresh "z" in
       let q := fresh "q" in
         intros [z q]
   end.
+
+Definition is_weq {A B} (f : A → B) := ∀ (y : B), is_contractible (fiber f y).
+Definition weq A B := { f : A → B & is_weq f }.
+
+ 
+Ltac via x := apply @compose with (y := x).
+
+Ltac category_tricks :=
+  first
+  [ apply compose
+  ].
+
+Program Definition opposite_ap A B (f: A -> B) (x y : A) (p : x ~ y) : ! map (ap f) p ~ map (ap f) (! p) := _.
+
+Program Definition opposite_map `(f: functor C D) { gC : is_groupoid C}  { gD : is_groupoid D} {x y : C} (p : x ~> y) : ! map f p ~ map f (! p) := _.
+Obligation 1.
+  
+
+Ltac path_tricks :=
+  first
+  [ apply opposite_ap
+  | category_tricks
+  ].
+
+
+Lemma total_paths {A : Type} (P : A → Type) (x y : sigT P) (p : projT1 x ~ projT1 y) : (map transport p (projT2 x) ~ projT2 y) -> (x ~ y).
+Proof.
+  intros q.
+  destruct x as [x H].
+  destruct y as [y G].
+  simpl in * |- *.
+  induction p.
+  simpl in q.  
+  path_induction.
+  auto.
+Defined.
+
+
+Definition weq_Type {A B} (w : weq A B) : A → B := projT1 w.
+Program Definition weq_types := Build_functor 
+Coercion weq_Type : weq >-> Funclass.
+
+
+
+
 
 (*
 Higher Inductive circle : Type
@@ -366,7 +423,7 @@ Module Export circle.
   Axiom loop : base ~ base.
 
   (* dependent elimination *)
-  Program Definition circle_ind (B: circle -> Type) (b : B base) (l : transport B loop b ~ b) (x : circle) : B x.
+  Program Definition circle_ind (B: circle -> Type) (b : B base) (l : map (transport B) loop b ~ b) (x : circle) : B x.
   Proof.
     destruct x.
     apply b.
@@ -402,5 +459,122 @@ Proof. Admitted.
 Coercion thin_is_category1  : is_thin >-> is_category1.
 *)
 
-End Main.
+
+(*
+Definition is_contractible_join (A : Type) (p : is_contractible A) : is_contractible (is_contractible A).
+Proof.
+  destruct p.
+  rapply existT.
+  rapply existT.
+  apply x.
+  intros.
+  apply (p y).
+  intros.
+
+
+Program Definition is_contractible_implies_is_prop (A : Type) (p : is_contractible A) : is_prop A := _.
+Obligation 1.
+  unfold is_prop.
+  unfold is_contractible.
+  assert (p' := p).
+  destruct p.
+  intros y z.
+  rapply existT.
+  - apply (! p z ∘ p y).
+  - intros.
+
+
+
+Program Definition is_prop_implies_is_set (A : Type) (p : is_prop A): is_set A := _.
+Obligation 1.
+  unfold is_set.
+  unfold is_prop.
+  unfold is_contractible.
+  intros x y xy1 xy2.
+  rapply existT.
+  specialize (p a a).
+  destruct p.
+  path_induction.
+  specialize (p x y).
+  destruct p.
+  path_induction.
+  assert (q := p).
+  assert (r := p).
+  assert (s := p).
+  specialize (p xy1).
+  specialize (q xy2).
+  assert (q' := inverse q).
+  assert (qp := compose q' p).
+  rapply existT.
+  - apply qp. 
+  - intros.
+    path_induction.
+    
+  assert (blah := projT2 p).
+  
+*)
+
+(*
+Program Definition opcoe := Build_functor (Op (Paths Type)) Types _ _ _ _.
+Next Obligation.
+  
+  unfold opcoe_obligation_1.
+  destruct X.
+  apply id.
+Defined.
+Next Obligation.
+  intros.
+  unfold op.
+  unfold types_is_category_obligation_2.
+  unfold opcoe_obligation_2.
+Defined.
+*) 
+(*
+Program Definition gopf `(f : functor C D) { C' : is_groupoid C } := Build_functor (Op C) D f _ _ _.
+Next Obligation.
+  assert (L := inverse).
+  assert (C'' := @op_is_groupoid C _ C').
+  *)
+
+(*
+Lemma transport_fiber A B (f : A -> B) (x y : A) (z : B) (p : x ~ y) (q : f x ~ z) :
+  map (transport (P := λ x, f x ~ z)) p q ~ q ∘ ! map (ap f) p.
+Proof.
+  induction p.
+  via q.
+  apply paths_is_category.
+  via (q ∘ ! id (x := f a)). 
+  apply paths_is_category.
+  via (q ∘ ! id (x := f x)).
+  
+   
+Program Definition weq_id {A} : weq A A := existT _ _ _.
+Next Obligation.
+  unfold is_weq.
+  unfold weq_id_obligation_1.
+  unfold is_contractible.
+  unfold fiber.
+  intros.
+  rapply existT.
+  rapply existT.
+  apply y.
+  apply refl.
+  intros.
+   
+
+Program Instance weq_is_category : is_category weq.
+Obligation 1.
+  rapply existT.
+  apply (fun x => x).
+    
+
+contract_fiber x (@refl _ x).
+  
+
+
+Obligation 1.
+{ compose := _
+}.
+
+  *)
 
