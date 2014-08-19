@@ -14,7 +14,6 @@ Set Universe Polymorphism.
 Generalizable All Variables.
 
 Reserved Notation "x ~> y" (at level 90, right associativity).
-Reserved Notation "x ⇒ y" (at level 90, right associativity).
 Reserved Notation "f ∘ g" (at level 45).
 Reserved Notation "1".
 Reserved Notation "x ~{ C }~> y" (at level 90, right associativity).
@@ -67,12 +66,12 @@ Class is_category {ob : Type} (hom : ob → ob → Type) :=
 ; id_id            : ∀ {x : ob}, @id x ∘ @id x ~ @id x
 }.
 
-Arguments compose [ob hom !C x y z] f g : rename.
-Arguments compose_assoc [ob hom !C w x y z] f g h : rename.
-Arguments compose_assoc_op [ob hom !C w x y z] f g h : rename.
+Arguments compose [ob hom !C x y z] f%hom g%hom : rename.
+Arguments compose_assoc [ob hom !C w x y z] f%hom g%hom h%hom : rename.
+Arguments compose_assoc_op [ob hom !C w x y z] f%hom g%hom h%hom : rename.
 Arguments id [ob hom !C x] : rename.
-Arguments right_id [ob hom !C x y] f : rename.
-Arguments left_id [ob hom !C x y] f : rename.
+Arguments right_id [ob hom !C x y] f%hom : rename.
+Arguments left_id [ob hom !C x y] f%hom : rename.
 Arguments id_id [ob hom !C x] : rename.
 
 Bind Scope category_scope with is_category.
@@ -183,12 +182,14 @@ Section unique_id.
     (id0_right : ∀ x y (f : x ~> y), f ∘ id0 x ~ f)
     : ∀ x, id0 x ~ id1 x.
   Proof.
-    intro.
+    intro x.
     specialize (id1_left x x (id0 x)).
     specialize (id0_right x x (id1 x)).
     apply (compose id0_right id1_left).
   Defined.
 
+(*
+  (* TODO: avoid inversion? *)
   Definition as_left_id {x y} (f : x ~> y) (i : y ~> y) (H : i ~ id) : i ∘ f ~ f.
   Proof.
     inversion H.
@@ -202,12 +203,14 @@ Section unique_id.
     subst.
     apply right_id.
   Defined.
-
+*)
 End unique_id.
 
 Arguments unique_id [!C] f i H%hom id1_left id0_right : rename.
+(*
 Arguments as_left_id [!C x y] f i H%hom : rename.
 Arguments as_right_id [!C x y] f i H%hom : rename.
+*)
 
 Record functor (C: category) (D: category) :=
 { fobj :> C → D
@@ -255,24 +258,14 @@ Program Definition ap `(f : A -> B) := Build_functor (Paths A) (Paths B) _ _ _ _
 
 Program Definition transportF {A : Type} (P: A -> Type) := Build_functor (Paths A) Types _ _ _ _.
 
-Program Definition transport {A : Type} (B : A -> Type) {x y : A} : (x = y) -> B x -> B y.
-Proof.
-  path_induction.
-  destruct H.
-  apply X.
-Defined.
+Program Definition transport {A : Type} (B : A -> Type) {x y : A} (H : x ~ y) : B x -> B y := _.
 
-Program Definition apd {A : Type} {B : A -> Type} {x y : A} (f: ∀ (a: A), B a) (p: x = y) :
-  transport B p (f x) = f y := _.
+Program Definition apd {A : Type} {B : A -> Type} {x y : A} (f: ∀ (a: A), B a) (p: x ~ y) :
+  transport B p (f x) ~ f y := _.
 
 Program Definition optransportF `(P: A -> Type) := Build_functor (Op (Paths A)) Types _ _ _ _.
 
-Program Definition optransport {A : Type} (B : A -> Type) {x y : A} : (x = y) -> B y -> B x.
-Proof.
-  path_induction.
-  destruct H.
-  apply X.
-Defined.
+Program Definition optransport {A : Type} (B : A -> Type) {x y : A} : (x ~ y) -> B y -> B x := _.
 
 Program Definition coe := Build_functor (Paths Type) Types _ _ _ _.
 
@@ -342,16 +335,15 @@ Coercion set_Type : set >-> Sortclass.
 
 (* TODO: Hedberg's theorem showing types with decidable equalities are sets *)
 
-Program Definition path_over `(B: A -> Type) `(p : x = y) (u : B x) (v : B y):= u = v.
+Program Definition path_over `(B: A -> Type) `(p : x ~ y) (u : B x) (v : B y):= u ~ v.
 
 (* Paulin-Mohring J / based path induction *)
 Program Definition J
   {A : Type}  (M : A) (C : ∀ (y : A), (based_paths M y) -> Type)
-  (H : C M refl') (N : A) (P : based_paths M N) : C N P.
-Proof. path_induction. auto. Defined.
+  (H : C M refl') (N : A) (P : based_paths M N) : C N P := _.
 
 (* TODO: replace these with a comma category ? *)
-Definition fiber `(f : A -> B) (y : B) := { x : A & f x = y }.
+Definition fiber `(f : A -> B) (y : B) := { x : A & f x ~ y }.
 
 Ltac contract_fiber y p :=
   match goal with
@@ -371,17 +363,17 @@ Higher Inductive circle : Type
 Module Export circle.
 
   Private Inductive circle : Type := | base : circle.
-  Axiom loop : base = base.
+  Axiom loop : base ~ base.
 
   (* dependent elimination *)
-  Program Definition circle_ind (B: circle -> Type) (b : B base) (l : transport B loop b = b) (x : circle) : B x.
+  Program Definition circle_ind (B: circle -> Type) (b : B base) (l : transport B loop b ~ b) (x : circle) : B x.
   Proof.
     destruct x.
     apply b.
   Defined.
 
   (* non-dependent elimination *)
-  Program Definition circle_rect (B : Type) (b : B) (l : b = b) : circle -> B.
+  Program Definition circle_rect (B : Type) (b : B) (l : b ~ b) : circle -> B.
   Proof.
    intros.
    destruct H.
