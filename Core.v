@@ -54,47 +54,42 @@ Ltac path_induction :=
 
 Local Obligation Tactic := autounfold; program_simpl; path_induction; auto.
 
+
 (* an (∞,1)-category / category up to coherent homotopy *)
 
-Class is_category {ob : Type} (hom : ob → ob → Type) :=
-{ id               : ∀ {x : ob}, hom x x where "x ~> y" := (hom x y)
-; compose          : ∀ {x y z : ob}, (y ~> z) → (x ~> y) → (x ~> z) where "f ∘ g" := (compose f g)
-; compose_assoc    : ∀ {w x y z : ob} (f : y ~> z) (g : x ~> y) (h : w ~> x), f ∘ (g ∘ h) ~ (f ∘ g) ∘ h
-; compose_assoc_op : ∀ {w x y z : ob} (f : y ~> z) (g : x ~> y) (h : w ~> x), (f ∘ g) ∘ h ~ f ∘ (g ∘ h)
-; right_id         : ∀ {x y : ob} (f : x ~> y), f ∘ @id x ~ f
-; left_id          : ∀ {x y : ob} (f : x ~> y), @id y ∘ f ~ f
-; id_id            : ∀ {x : ob}, @id x ∘ @id x ~ @id x
-}.
-
-Arguments compose [ob hom !C x y z] f%hom g%hom : rename.
-Arguments compose_assoc [ob hom !C w x y z] f%hom g%hom h%hom : rename.
-Arguments compose_assoc_op [ob hom !C w x y z] f%hom g%hom h%hom : rename.
-Arguments id [ob hom !C x] : rename.
-Arguments right_id [ob hom !C x y] f%hom : rename.
-Arguments left_id [ob hom !C x y] f%hom : rename.
-Arguments id_id [ob hom !C x] : rename.
-
-Bind Scope category_scope with is_category.
-
 Record category :=
-{ ob  :> Type
-; hom :> ob → ob → Type where "x ~> y" := (hom x y)
-; category_is_category :> @is_category ob hom
+{ ob               :> Type
+; hom              :> ob -> ob -> Type where "x ~> y" := (hom x y)
+; id               : ∀ {x}, x ~> x
+; compose          : ∀ {x y z}, (y ~> z) → (x ~> y) → (x ~> z) where "f ∘ g" := (compose f g)
+; compose_assoc    : ∀ {w x y z} (f : y ~> z) (g : x ~> y) (h : w ~> x), f ∘ (g ∘ h) ~ (f ∘ g) ∘ h
+; compose_assoc_op : ∀ {w x y z} (f : y ~> z) (g : x ~> y) (h : w ~> x), (f ∘ g) ∘ h ~ f ∘ (g ∘ h)
+; right_id         : ∀ {x y} (f : x ~> y), f ∘ @id x ~ f
+; left_id          : ∀ {x y} (f : x ~> y), @id y ∘ f ~ f
+; id_id            : ∀ {x}, @id x ∘ @id x ~ @id x
 }.
 
-Arguments hom [!C] x y : rename.
+Arguments hom [!C] x y : rename. 
 
-Existing Instance category_is_category.
+Infix "~>" := hom.
+Infix "~{ C }~>" := (hom C) (at level 90, right associativity).
 
 Bind Scope category_scope with category.
+
+Arguments compose [C x y z] f%hom g%hom : rename.
+Arguments compose_assoc [C w x y z] f%hom g%hom h%hom : rename.
+Arguments compose_assoc_op [C w x y z] f%hom g%hom h%hom : rename.
+Arguments id [C x] : rename.
+Arguments right_id [C x y] f%hom : rename.
+Arguments left_id [C x y] f%hom : rename.
+Arguments id_id [C x] : rename.
+
 Bind Scope hom_scope with hom.
 
 Create HintDb category discriminated.
 Create HintDb hom discriminated.
 
-Infix "~>" := hom.
-Infix "~{ C }~>" := (hom C) (at level 90, right associativity).
-Infix "∘" := compose : hom_scope.
+Infix "∘" := (@compose _ _ _ _) : hom_scope.
 
 Hint Resolve compose_assoc compose_assoc_op left_id right_id id_id.
 Hint Rewrite left_id right_id @id_id : category.
@@ -110,75 +105,58 @@ Notation "1" := (refl') : based_path_scope.
 Open Scope hom_scope.
 Open Scope category_scope.
 
-Class is_groupoid {ob : Type} (hom : ob → ob → Type) :=
-{ is_groupoid_is_category :> is_category hom | 2 where "x ~> y" := (hom x y)
-; inverse : ∀ {x y : ob}, (x ~> y) → (y ~> x)
-; inverse_inverse : ∀ {x y : ob} (f : x ~> y), inverse (inverse f) ~ f
-; inverse_left_inverse : ∀ {x y : ob} (f : x ~> y), inverse f ∘ f ~ id
-; inverse_right_inverse : ∀ {x y : ob} (f : x ~> y), f ∘ inverse f ~ id
+Record groupoid  :=
+{ groupoid_category :> category
+; inverse : ∀ {x y}, (x ~> y) → (y ~> x)
+; inverse_inverse : ∀ {x y} (f : x ~> y), inverse (inverse f) ~ f
+; inverse_left_inverse : ∀ {x y} (f : x ~> y), inverse f ∘ f ~ id
+; inverse_right_inverse : ∀ {x y : groupoid_category} (f : x ~> y), f ∘ inverse f ~ id
 }.
-
-Coercion is_groupoid_is_category : is_groupoid >-> is_category.
-
-Record groupoid :=
-{ groupoid_category :> @category
-; groupoid_is_groupoid :> is_groupoid (hom (C := groupoid_category))
-}.
-
-(* ; commutes : category_is_category groupoid_category ~ is_groupoid_is_category groupoid_is_groupoid *)
-
-Existing Instance groupoid_is_groupoid.
 
 Notation "! p" := (@inverse _ _ _ _ _ p) (at level 40) : hom_scope.
 
-Arguments inverse               [ob hom !C x y] f%hom : rename.
-Arguments inverse_inverse       [ob hom !C x y] f%hom : rename.
-Arguments inverse_left_inverse  [ob hom !C x y] f%hom : rename.
-Arguments inverse_right_inverse [ob hom !C x y] f%hom : rename.
+Arguments inverse               [C x y] f%hom : rename.
+Arguments inverse_inverse       [C x y] f%hom : rename.
+Arguments inverse_left_inverse  [C x y] f%hom : rename.
+Arguments inverse_right_inverse [C x y] f%hom : rename.
 
 Hint Resolve inverse_inverse inverse_left_inverse inverse_right_inverse.
-Hint Rewrite @inverse_inverse @inverse_left_inverse @inverse_right_inverse : category.
-Hint Rewrite @inverse_inverse @inverse_left_inverse @inverse_right_inverse : hom.
-Hint Rewrite @inverse_inverse @inverse_left_inverse @inverse_right_inverse : path.
+Hint Rewrite inverse_inverse inverse_left_inverse inverse_right_inverse : category.
+Hint Rewrite inverse_inverse inverse_left_inverse inverse_right_inverse : hom.
+Hint Rewrite inverse_inverse inverse_left_inverse inverse_right_inverse : path.
 
 (** types *)
 
-Definition types (x y : Type) : Type := x -> y.
-Hint Unfold types.
-Program Instance types_is_category : is_category types.
-Definition Types : category := {| hom := types |}.
+Program Definition Types : category := {| hom := λ (x y : Type), x -> y |}.
+Program Definition Sets : category := {| hom := λ (x y : Set), x -> y |}.
 
-Definition sets (x y : Set) := x -> y.
-Hint Unfold sets.
-Program Instance sets_is_category : is_category sets.
-Definition Sets : category := {| hom := sets |}.
-
-Definition fun_compose := compose (hom:=types).
+Definition fun_compose := compose (C:=Types).
 Infix "∘" := fun_compose : type_scope.
 
 (** Paths *)
 
-Program Instance paths_is_category {A} : is_category (@paths A).
-Program Instance paths_is_groupoid {A} : is_groupoid (@paths A).
+Program Definition Paths A : groupoid := 
+{| groupoid_category := {| hom := @paths A |} |}.
 
-Definition path_compose {A} := compose (hom:=@paths A).
-Definition path_inverse {A} := inverse (hom:=@paths A).
+Definition path_compose {A} := compose (C:=@Paths A).
+Definition path_inverse {A} := inverse (C:=@Paths A).
 
-Definition Paths A : category := {| hom := @paths A |}.
-Hint Unfold Paths.
+Arguments path_compose [A x y z] f%hom g%hom.
+Arguments path_inverse [A x y] f%hom.
 
 Infix "∘" := path_compose : path_scope.
-Notation "! p" := (@path_inverse _ p _ _ ) (at level 40) : path_scope.
+Notation "! p" := (path_inverse p) (at level 40) : path_scope.
 
 (* based paths *)
 
-Program Instance based_paths_is_category A : is_category (@based_paths A).
-Program Instance based_paths_is_groupoid A : is_groupoid (@based_paths A).
+Program Definition BasedPaths A : groupoid :=
+{| groupoid_category := {| hom := @based_paths A |} |}.
 
-Definition BasedPaths A : category := {| hom := @paths A |}.
+Definition based_path_compose {A} := compose (C:=@BasedPaths A).
+Definition based_path_inverse {A} := inverse (C:=@BasedPaths A).
 
-Definition based_path_compose {A} := compose (hom:=@based_paths A).
-Definition based_path_inverse {A} := inverse (hom:=@based_paths A).
+Arguments based_path_compose [A x y z] f%hom g%hom.
+Arguments based_path_inverse [A x y] f%hom.
 
 Infix "∘" := based_path_compose : based_path_scope.
 Notation "! p" := (based_path_inverse p) (at level 40) : based_path_scope.
@@ -195,7 +173,7 @@ Section unique_id.
     intro x.
     specialize (id1_left x x (id0 x)).
     specialize (id0_right x x (id1 x)).
-    apply (compose id0_right id1_left).
+    apply (path_compose id0_right id1_left).
   Defined.
 
   (* TODO: avoid inversion? *)
@@ -214,9 +192,9 @@ Section unique_id.
   Defined.
 End unique_id.
 
-Arguments unique_id [!C] f i H%hom id1_left id0_right : rename.
-Arguments as_left_id [!C x y] f i H%hom : rename.
-Arguments as_right_id [!C x y] f i H%hom : rename.
+Arguments unique_id [C] f i H%hom id1_left id0_right : rename.
+Arguments as_left_id [C x y] f i H%hom : rename.
+Arguments as_right_id [C x y] f i H%hom : rename.
 
 
 Record functor (C: category) (D: category) :=
@@ -233,43 +211,18 @@ Arguments map [C%category D%category] !F [x y] f%hom : rename.
 
 (* Opposite notions *)
 
-Section Op.
-  Variable ob : Type.
-  Variable hom : ob -> ob -> Type.
+Program Definition op (C : category) :=
+{| hom := λ (x y : C), C y x
+ ; id  := @id C
+ ; compose := λ _ _ _ f g, compose (C := C) g f
+|}.
 
-  Definition op (x: ob) (y: ob) : Type := hom y x.
+Program Definition op_groupoid (C : groupoid) : groupoid :=
+{| groupoid_category := op C
+ ; inverse := λ x y, @inverse C y x
+|}.
 
-  Hint Unfold op.
-
-  Program Instance op_is_category { C : is_category hom } : is_category op :=
-  { id := @id _ _ C
-  ; compose := λ _ _ _ f g, compose (C := C) g f
-  }.
-
-  Program Instance op_is_groupoid { C : is_groupoid hom } : is_groupoid op :=
-  { is_groupoid_is_category := op_is_category
-  ; inverse := λ x y, @inverse _ _ C y x
-  }.
-
-End Op.
-
-
-Hint Unfold op.
-
-
-Arguments op_is_category [ob] hom [C].
-Arguments op_is_groupoid [ob] hom [C].
-
-Definition Op (C : category) : category := 
-{| ob := C
- ; hom := op (@hom C)
- ; category_is_category := op_is_category (@hom C)
- |}.
-
-Program Definition from_op {ob} {hom : ob -> ob -> Type} {x y} : op hom y x → hom x y := _.
-Program Definition to_op {ob} {hom : ob -> ob -> Type} {x y} : hom x y -> op hom y x := _.
-
-Program Definition contramap `(F : functor (Op C) D) {x y : C} (f : x ~> y) : F y ~> F x := map F (to_op f).
+Program Definition contramap `(F : functor (op C) D) {x y : C} (f : x ~> y) : F y ~> F x := map F f.
   
 (* Probably the first novel development in this file *)
 Program Definition aps `(f : A → B) := Build_functor (Paths A) (Paths B) f _ _ _.
@@ -300,26 +253,22 @@ Program Definition debased {A} := Build_functor (BasedPaths A) (Paths A) _ _ _ _
 
 
 Section inverses.
-  Variable ob : Type.
-  Variable hom : ob -> ob -> Type.
-  Variable C : is_groupoid hom.
+  Variable C : groupoid.
 
-  Variable x y : ob.
-  Variable f : hom x y.
-  Variable g : hom y x.
+  Variable x y : C.
+  Variable f : C x y.
+  Variable g : C y x.
 
-  Program Definition as_left_inverse (H : g ~ !f) : g ∘ f ~ id.
+  Program Definition as_left_inverse (H : g ~ inverse f) : g ∘ f ~ id.
   Proof.
-    apply compose with (y := !f ∘ f).
-    - apply paths_is_category.
+    apply path_compose with (y := inverse f ∘ f).
     - apply (inverse_left_inverse f).
     - apply (ap (λ g, compose g f) H).
   Defined.
 
-  Program Definition as_right_inverse (H : g ~ !f) : f ∘ g ~ id.
+  Program Definition as_right_inverse (H : g ~ inverse f) : f ∘ g ~ id.
   Proof.
-    apply compose with (y := f ∘ !f).
-    - apply paths_is_category.
+    apply path_compose with (y := f ∘ inverse f).
     - apply (inverse_right_inverse f).
     - apply (ap (compose f) H).
   Defined.
@@ -388,22 +337,15 @@ Ltac category_tricks :=
   [ apply compose
   ].
 
-Program Definition opposite_ap A B (f: A -> B) (x y : A) (p : x ~ y) : inverse (ap f p) ~ ap f (inverse p) := _.
-
 (*
-Program Definition opposite_map `(f: functor C D) { gC : is_groupoid C}  { gD : is_groupoid D} {x y : C} (p : x ~> y) : ! map f p ~ map f (! p) := _.
-Obligation 1.
-  *)
-
-
- 
+Program Definition opposite_ap A B (f: A -> B) (x y : A) (p : x ~ y) : inverse (ap f p) ~ ap f (inverse p) := _.
 
 Ltac path_tricks :=
   first
   [ apply opposite_ap
   | category_tricks
   ].
-
+*)
 
 Lemma total_paths {A : Type} (P : A → Type) (x y : sigT P) (p : projT1 x ~ projT1 y) : (transport p (projT2 x) ~ projT2 y) -> (x ~ y).
 Proof.
