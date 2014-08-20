@@ -33,6 +33,10 @@ Class Transitive {A} (R : relation A) :=
 
 Hint Unfold Transitive.
 
+Notation "x .1" := (projT1 x) (at level 3).
+Notation "x .2" := (projT2 x) (at level 3).
+Notation "( x ; y )" := (existT _ x y).
+
 (** A [PreOrder] is both Reflexive and Transitive. *)
 Class PreOrder {A} (R : relation A) :=
   { PreOrder_Reflexive :> Reflexive R | 2 ;
@@ -79,7 +83,7 @@ Arguments refl [A x], [A] x, A x.
 Hint Resolve refl refl'.
 
 Notation "x ~ y" := (paths x y) (at level 70).
-Notation "x ~{ A }~ y" := (paths A x y) (at level 69).
+(* Notation "x ~{ A }~ y" := (paths A x y) (at level 69). *)
 
 Ltac path_induction :=
   intros; repeat progress (
@@ -207,14 +211,14 @@ Infix "∘" := based_path_compose : based_path_scope.
 Notation "! p" := (based_path_inverse p) (at level 40) : based_path_scope.
 
 Record functor (C: category) (D: category) :=
-{ map_ob : C → D
-; map : ∀ {x y : C}, (x ~> y) → map_ob x ~> map_ob y
-; map_id : ∀ {x : C}, map (id (x := x)) ~ id
-; map_compose : ∀ {x y z : C} (f : y ~> z) (g : x ~> y),
+{ map_ob : ob C → ob D
+; map : ∀ {x y : ob C}, (x ~> y) → hom D (map_ob x) (map_ob y)
+; map_id : ∀ {x : ob C}, map (id (x := x)) ~ id
+; map_compose : ∀ {x y z : ob C} (f : y ~> z) (g : x ~> y),
    map f ∘ map g ~ map (f ∘ g)
 }.
 
-Arguments map_ob [C%category D%category] !F x : rename.
+Arguments map_ob [C%category D%category] F x : rename.
 Arguments map [C%category D%category] !F [x y] f%hom : rename.
 
 (* this hack lets us use a functor as its action on morphisms, rather than its action on objects *)
@@ -223,6 +227,8 @@ Record > morphism (C: category) :=
 ; morphism_y : C
 ; morphism_f :> morphism_x ~> morphism_y
 }.
+
+Hint Unfold morphism_f.
 
 Arguments Build_morphism [C x y] f%hom : rename.
 
@@ -253,16 +259,12 @@ Program Definition contramap `(F : functor (op C) D) {x y : C} (f : C x y) := ma
 Program Definition ap `(f : A → B) := Build_functor (Paths A) (Paths B) f _ _ _.
 
 Program Definition transport {A : Type} `(P: A → Type) := Build_functor (Paths A) Types P _ _ _.
-
-Notation "p # x" := (map (transport _) p x) (right associativity, at level 65, only parsing).
+Notation "p # x" := (transport _ p x) (right associativity, at level 65, only parsing).
 
 Program Definition apd {A : Type} {P : A → Type} {x y : A} (f: ∀ (a: A), P a) (p: x ~ y) :
   p # f x ~ f y := _.
 
-(*
-Program Definition optransports {A: Type} {P: A → Type} := Build_functor (Op (Paths A)) Types P _ _ _.
-Definition optransport {A: Type} {P: A → Type} {x y: A} (p : x ~ y) : P y → P x := contramap optransports p.
-*)
+Program Definition optransport {A: Type} {P: A → Type} := Build_functor (op (Paths A)) Types P _ _ _.
 
 Program Definition coe := Build_functor (Paths Type) Types _ _ _ _.
 
@@ -333,16 +335,16 @@ Definition prop := sigT is_prop.
 Definition set := sigT is_set.
 Definition level (n: nat) := sigT (is_level n).
 
-Definition contractible_Type (p : contractible) := projT1 p.
+Definition contractible_Type (p : contractible) := p.1.
 Coercion contractible_Type : contractible >-> Sortclass.
 
-Definition prop_Type (p : prop) := projT1 p.
+Definition prop_Type (p : prop) := p.1.
 Coercion prop_Type : prop >-> Sortclass.
 
-Definition set_Type (p : set) := projT1 p.
+Definition set_Type (p : set) := p.1.
 Coercion set_Type : set >-> Sortclass.
 
-Definition level_Type {n} (p : level n) := projT1 p.
+Definition level_Type {n} (p : level n) := p.1.
 Coercion level_Type : level >-> Sortclass.
 
 (* TODO: Hedberg's theorem showing types with decidable equalities are sets *)
@@ -378,38 +380,53 @@ Ltac path_tricks :=
   ].
 
 
-Lemma total_paths {A : Type} (P : A → Type) (x y : sigT P) (p : projT1 x ~ projT1 y) (q : p # projT2 x ~ projT2 y) : x ~ y.
+Lemma total_paths {A : Type} (P : A → Type) (x y : sigT P) (p : x.1 ~ y.1) (q : p # x.2 ~ y.2) : x ~ y.
 Proof.
   destruct x as [x H].
   destruct y as [y G].
   simpl in * |- *.
   induction p.
-  unfold transport in q.
   simpl in q.
   path_induction.
   auto.
 Defined.
 
+Program Definition transportD {A : Type} (B : A → Type) (C : ∀ a:A, B a → Type)
+  {x1 x2 : A} (p : x1 ~ x2) (y : B x1) (z : C x1 y) : C x2 (p # y) := _.
+
+(*
+Definition transport_forall
+  {A : Type} {P : A -> Type} {C : ∀ x, P x -> Type}
+  {x1 x2 : A} (p : x1 ~ x2) (f : forall y : P x1, C x1 y)
+  : (transport (λ x, ∀ y : P x, C x y) p f)
+ == (λ y => transport (C x2) (transport_pV _ _ _) (transportD _ _ p _ (f (p^ # y))))
+  := match p with idpath => fun _ => 1 end.
+*)
 
 Section category_eq.
   Variable C D  : category.
   Variable obs  : ob C ~ ob D.
 
-  Definition transport_hom := transport (λ x, x -> x -> Type) obs.
+  Program Definition transport_hom 
+     : (ob C → ob C → Type) -> ob D -> ob D -> Type
+     := transport (λ x, x -> x -> Type) obs.
+
 
   Definition homC' := transport_hom (hom C).
+
+
   Variable homs : homC' ~ hom D.
 
-  Definition transport_id {A} := map (transport (λ (hom : A -> A -> Type), ∀ 
-(x : A), hom x x)).
+  Definition transport_id {A} := map (transport (λ (hom : A -> A -> Type), ∀ (x : A), hom x x)).
 
+  
 
   Definition transport_id' := transport_id homs.
 
 
 End category_eq.
 
-Definition weq_Type {A B : Type} (w : weq A B) : A → B := projT1 w.
+Definition weq_Type {A B : Type} (w : weq A B) : A → B := w.1 .
 
 Program Definition id_functor (C : category) := Build_functor C C _ _ _ _.
 
