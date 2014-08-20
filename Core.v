@@ -93,13 +93,13 @@ Ltac path_induction :=
 
 Local Obligation Tactic := autounfold; program_simpl; path_induction; auto.
 
-Program Instance paths_reflexive {A} : Reflexive (@paths A) := _.
-Program Instance paths_transitive {A} : Transitive (@paths A) := _.
-Program Instance paths_symmetric {A} : Symmetric (@paths A) := _.
+Program Instance reflexive_paths {A} : Reflexive (@paths A) | 0 := _.
+Program Instance transitive_paths {A} : Transitive (@paths A) | 0 := _.
+Program Instance symmetric_paths {A} : Symmetric (@paths A) | 0 := _.
 
-Program Instance based_paths_reflexive {A} : Reflexive (@based_paths A) := _.
-Program Instance based_paths_transitive {A} : Transitive (@based_paths A) := _.
-Program Instance based_paths_symmetric {A} : Symmetric (@based_paths A) := _.
+Program Instance reflexive_based_paths {A} : Reflexive (@based_paths A)| 0  := _.
+Program Instance transitive_based_paths {A} : Transitive (@based_paths A) | 0 := _.
+Program Instance symmetric_based_paths {A} : Symmetric (@based_paths A) | 0 := _.
   
 (* an (∞,1)-category / category up to coherent homotopy *)
 
