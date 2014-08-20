@@ -8,11 +8,10 @@ Set Implicit Arguments.
 Set Shrink Obligations.
 Set Universe Polymorphism.
 
+  
 Generalizable Variables A B C D x y.
 
 (* World Building *)
-
-Section Relations.
 
 (* We had to give up the stock relations because of HoTT and prop abuse with large indices being incompatible
    so we redefine them here. 
@@ -23,18 +22,22 @@ Definition relation (A : Type) := A -> A -> Type.
 Class Reflexive {A} (R : relation A) :=
   reflexivity : forall x : A, R x x.
 
+Hint Unfold Reflexive.
+
 Class Symmetric {A} (R : relation A) :=
   symmetry : forall x y, R x y -> R y x.
 
+Hint Unfold Symmetric.
+
 Class Transitive {A} (R : relation A) :=
   transitivity : forall x y z, R x y -> R y z -> R x z.
+
+Hint Unfold Transitive.
 
 (** A [PreOrder] is both Reflexive and Transitive. *)
 Class PreOrder {A} (R : relation A) :=
   { PreOrder_Reflexive :> Reflexive R | 2 ;
     PreOrder_Transitive :> Transitive R | 2 }.
-
-End Relations.
 
 Tactic Notation "etransitivity" open_constr(y) :=
   let R := match goal with |- ?R ?x ?z => constr:(R) end in
@@ -43,7 +46,6 @@ Tactic Notation "etransitivity" open_constr(y) :=
   refine (@transitivity _ R _ x y z _ _).
 
 Tactic Notation "etransitivity" := etransitivity _.
-
 
 Reserved Notation "x ~> y" (at level 90, right associativity).
 Reserved Notation "f ∘ g" (at level 45).
@@ -61,21 +63,24 @@ Local Open Scope hom_scope.
 
 (** (based) paths *)
 
-Inductive based_paths {A} (a: A) : A → Type :=
-  refl' : based_paths a a.
+Inductive based_paths {A} (x: A) : A → Type :=
+  refl' : based_paths x x.
 
 Inductive paths {A} : A → A → Type :=
-  refl : ∀ (a: A), paths a a.
+  refl : ∀ (x: A), paths x x.
 
 Bind Scope path_scope with based_paths.
 Bind Scope path_scope with paths.
 
-Arguments refl' {A a}, [A] a.
-Arguments refl {A a}, [A] a.
-Hint Resolve @refl @refl'.
+Arguments paths [A] x y, A x y : rename.
+Arguments based_paths [A] x y, A x y : rename.
+Arguments refl' [A x], [A] x, A x.
+Arguments refl [A x], [A] x, A x.
+
+Hint Resolve refl refl'.
 
 Notation "x ~ y" := (paths x y) (at level 70).
-Notation "x ~{ A }~ y" := (@paths A x y) (at level 69).
+Notation "x ~{ A }~ y" := (paths A x y) (at level 69).
 
 Ltac path_induction :=
   intros; repeat progress (
@@ -88,6 +93,14 @@ Ltac path_induction :=
 
 Local Obligation Tactic := autounfold; program_simpl; path_induction; auto.
 
+Program Instance paths_reflexive {A} : Reflexive (@paths A) := _.
+Program Instance paths_transitive {A} : Transitive (@paths A) := _.
+Program Instance paths_symmetric {A} : Symmetric (@paths A) := _.
+
+Program Instance based_paths_reflexive {A} : Reflexive (@based_paths A) := _.
+Program Instance based_paths_transitive {A} : Transitive (@based_paths A) := _.
+Program Instance based_paths_symmetric {A} : Symmetric (@based_paths A) := _.
+  
 (* an (∞,1)-category / category up to coherent homotopy *)
 
 Record category :=
@@ -102,20 +115,20 @@ Record category :=
 ; id_id            : ∀ {x}, @id x ∘ @id x ~ @id x
 }.
 
-Arguments hom C x y : rename.
+Arguments hom [C] x y, C x y : rename.
 
-Infix "~>" := (hom _).
-Infix "~{ C }~>" := (hom C) (at level 90, right associativity).
+Infix "~>" := (@hom _).
+Infix "~{ C }~>" := (@hom C) (at level 90, right associativity).
 
 Bind Scope category_scope with category.
 
-Arguments compose [C x y z] f%hom g%hom : rename.
-Arguments compose_assoc [C w x y z] f%hom g%hom h%hom : rename.
-Arguments compose_assoc_op [C w x y z] f%hom g%hom h%hom : rename.
-Arguments id [C x] : rename.
-Arguments right_id [C x y] f%hom : rename.
-Arguments left_id [C x y] f%hom : rename.
-Arguments id_id [C x] : rename.
+Arguments compose [!C x y z] f%hom g%hom : rename.
+Arguments compose_assoc [!C w x y z] f%hom g%hom h%hom : rename.
+Arguments compose_assoc_op [!C w x y z] f%hom g%hom h%hom : rename.
+Arguments id [!C x] : rename.
+Arguments right_id [!C x y] f%hom : rename.
+Arguments left_id [!C x y] f%hom : rename.
+Arguments id_id [!C x] : rename.
 
 Program Instance category_reflexive {C : category} : Reflexive C := @id C.
 Program Instance category_transitive {C : category} : Transitive C := λ x y z f g, @compose C x y z g f.
@@ -133,11 +146,6 @@ Hint Rewrite left_id right_id @id_id : hom.
 
 Notation "1" := (id) : hom_scope.
 
-(*
-Notation "1" := (refl) : path_scope.
-Notation "1" := (refl') : based_path_scope.
-*)
-
 Open Scope hom_scope.
 Open Scope category_scope.
 
@@ -149,13 +157,12 @@ Build_groupoid { groupoid_category :> category
 ; inverse_right_inverse : ∀ {x y : groupoid_category} (f : x ~> y), f ∘ inverse f ~ id
 }.
 
-
 Notation "! p" := (@inverse _ _ _ _ _ p) (at level 40) : hom_scope.
 
-Arguments inverse               [C x y] f%hom : rename, simpl nomatch.
-Arguments inverse_inverse       [C x y] f%hom : rename.
-Arguments inverse_left_inverse  [C x y] f%hom : rename.
-Arguments inverse_right_inverse [C x y] f%hom : rename.
+Arguments inverse               [!C x y] f%hom : rename, simpl nomatch.
+Arguments inverse_inverse       [!C x y] f%hom : rename.
+Arguments inverse_left_inverse  [!C x y] f%hom : rename.
+Arguments inverse_right_inverse [!C x y] f%hom : rename.
 
 Program Instance groupoid_symmetric {C : groupoid} : Symmetric C := @inverse C.
 
@@ -245,9 +252,9 @@ Program Definition contramap `(F : functor (op C) D) {x y : C} (f : C x y) := ma
 (* Probably the first novel development in this file *)
 Program Definition ap `(f : A → B) := Build_functor (Paths A) (Paths B) f _ _ _.
 
-Program Definition transport {A : Type} {P: A → Type} := Build_functor (Paths A) Types P _ _ _.
+Program Definition transport {A : Type} `(P: A → Type) := Build_functor (Paths A) Types P _ _ _.
 
-Notation "p # x" := (map transport p x) (right associativity, at level 65, only parsing).
+Notation "p # x" := (map (transport _) p x) (right associativity, at level 65, only parsing).
 
 Program Definition apd {A : Type} {P : A → Type} {x y : A} (f: ∀ (a: A), P a) (p: x ~ y) :
   p # f x ~ f y := _.
@@ -274,8 +281,7 @@ Section unique_id.
     (x: C) : id0 x ~ id1 x :=
       id0_right x x (id1 x) ∘ id1_left x x (id0 x).
 
-  Definition as_left_id {x y} (f : x ~> y) (i : y ~> y) (H : i ~ id) : i ∘ f ~ f :=
-    left_id f ∘ ap (λ i, i ∘ f) H.
+  Program Definition as_left_id {x y} (f : x ~> y) (i : y ~> y) (H : i ~ id) : i ∘ f ~ f := left_id f ∘ ap (λ i, i ∘ f) H.
 
   Definition as_right_id {x y} (f : x ~> y) (i : x ~> x) (H: i ~ id) : f ∘ i ~ f :=
     right_id f ∘ ap (compose f) H.
@@ -358,9 +364,6 @@ Ltac contract_fiber y p :=
 Definition is_weq {A B} (f : A → B) := ∀ (y : B), is_contractible (fiber f y).
 Definition weq A B := { f : A → B & is_weq f }.
 
-
-Ltac via x := apply @compose with (y := x).
-
 Ltac category_tricks :=
   first
   [ apply compose
@@ -388,24 +391,32 @@ Proof.
   auto.
 Defined.
 
-
 (*
+
 Section category_eq.
   Variable C D  : category.
   Variable obs  : ob C ~ ob D.
 
-  Definition transport_hom := transport (P := fun x => x -> x -> Type) obs.
+  Definition transport_hom := transport (λ x, x -> x -> Type) obs.
 
   Definition homC' := transport_hom (hom C).
   Variable homs : homC' ~ hom D.
 
-  Record Hom := { obH : Type; homH : obH -> obH -> Type }.
+  Definition transport_id {A} := map (transport (λ (hom : A -> A -> Type), ∀ 
+(x : A), hom x x)).
 
-  Definition transport_id := transport (P := λ hom, ∀ (x : ob C), hom x x) homs.
+
+  Definition transport_id' := transport_id homs.
+  Definition transport_id'' :=
+
+
+  
+(*
+  Definition transport_id' := transport (P := λ ob, transport (P := λ hom, ∀ (x: ob), hom x x) homs) obs.
 
   Check transport_id.
-
-  Definition ids : transport_idtransport (@id C) ~ @id D.
+*)
+  Definition ids : transport_id (@id C) ~ @id D.
 
 transport (P := λ O, ∀ (x : O), hom C x x) obs (
 
@@ -502,7 +513,7 @@ Module Export circle.
   Axiom loop : base ~ base.
 
   (* dependent elimination *)
-  Program Definition circle_ind (B: circle -> Type) (b : B base) (l : transport loop b ~ b) (x : circle) : B x.
+  Program Definition circle_ind (B: circle -> Type) (b : B base) (l : loop # b ~ b) (x : circle) : B x.
   Proof.
     destruct x.
     apply b.
