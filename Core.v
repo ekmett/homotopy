@@ -10,40 +10,11 @@ Set Universe Polymorphism.
 
 Generalizable Variables A B C D x y.
 
-(* World Building *)
-
-(* We had to give up the stock relations because of HoTT and prop abuse with large indices being incompatible
-   so we redefine them here. 
-*)
-
-Definition multirelation (A : Type) := A -> A -> Type.
-
-Class reflexive {A} (R : multirelation A) :=
-  reflexivity : forall x : A, R x x.
-
-Hint Unfold reflexive.
-
-Class symmetric {A} (R : multirelation A) :=
-  symmetry : forall x y, R x y -> R y x.
-
-Hint Unfold symmetric.
-
-Class transitive {A} (R : multirelation A) :=
-  transitivity : forall x y z, R x y -> R y z -> R x z.
-
-Hint Unfold transitive.
+(* Notation *)
 
 Notation "x .1" := (projT1 x) (at level 3).
 Notation "x .2" := (projT2 x) (at level 3).
 Notation "( x ; y )" := (existT _ x y).
-
-Tactic Notation "etransitivity" open_constr(y) :=
-  let R := match goal with |- ?R ?x ?z => constr:(R) end in
-  let x := match goal with |- ?R ?x ?z => constr:(x) end in
-  let z := match goal with |- ?R ?x ?z => constr:(z) end in
-  refine (@transitivity _ R _ x y z _ _).
-
-Tactic Notation "etransitivity" := etransitivity _.
 
 Reserved Notation "x ~> y" (at level 90, right associativity).
 Reserved Notation "f ∘ g" (at level 45).
@@ -52,8 +23,6 @@ Reserved Notation "x ~{ C }~> y" (at level 90, right associativity).
 
 Delimit Scope category_scope with category.
 Delimit Scope hom_scope with hom.
-Delimit Scope path_scope with path.
-Delimit Scope based_path_scope with based_path.
 
 Local Open Scope hom_scope.
 
@@ -91,13 +60,6 @@ Ltac path_induction :=
 
 Local Obligation Tactic := autounfold; program_simpl; path_induction; auto.
 
-Program Instance reflexive_paths {A} : reflexive (@paths A) | 0 := _.
-Program Instance transitive_paths {A} : transitive (@paths A) | 0 := _.
-Program Instance symmetric_paths {A} : symmetric (@paths A) | 0 := _.
-
-Program Instance reflexive_based_paths {A} : reflexive (@based_paths A)| 0  := _.
-Program Instance transitive_based_paths {A} : transitive (@based_paths A) | 0 := _.
-Program Instance symmetric_based_paths {A} : symmetric (@based_paths A) | 0 := _.
   
 (* an (∞,1)-category / category up to coherent homotopy *)
 
@@ -127,9 +89,6 @@ Arguments id [!C x] : rename.
 Arguments right_id [!C x y] f%hom : rename.
 Arguments left_id [!C x y] f%hom : rename.
 Arguments id_id [!C x] : rename.
-
-Program Instance category_reflexive {C : category} : reflexive C := @id C.
-Program Instance category_transitive {C : category} : transitive C := λ x y z f g, @compose C x y z g f.
 
 Bind Scope hom_scope with hom.
 
@@ -161,8 +120,6 @@ Arguments inverse               [!C x y] f%hom : rename, simpl nomatch.
 Arguments inverse_inverse       [!C x y] f%hom : rename.
 Arguments inverse_left_inverse  [!C x y] f%hom : rename.
 Arguments inverse_right_inverse [!C x y] f%hom : rename.
-
-Program Instance groupoid_symmetric {C : groupoid} : symmetric C := @inverse C.
 
 Hint Resolve inverse_inverse inverse_left_inverse inverse_right_inverse.
 Hint Rewrite inverse_inverse inverse_left_inverse inverse_right_inverse : category.
@@ -461,7 +418,7 @@ Obligation 1.
   simpl.
   
 Abort right_id_functor.
-*)
+
 
 
 (*
