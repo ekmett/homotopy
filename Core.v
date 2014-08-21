@@ -16,31 +16,26 @@ Generalizable Variables A B C D x y.
    so we redefine them here. 
 *)
 
-Definition relation (A : Type) := A -> A -> Type.
+Definition multirelation (A : Type) := A -> A -> Type.
 
-Class Reflexive {A} (R : relation A) :=
+Class reflexive {A} (R : multirelation A) :=
   reflexivity : forall x : A, R x x.
 
-Hint Unfold Reflexive.
+Hint Unfold reflexive.
 
-Class Symmetric {A} (R : relation A) :=
+Class symmetric {A} (R : multirelation A) :=
   symmetry : forall x y, R x y -> R y x.
 
-Hint Unfold Symmetric.
+Hint Unfold symmetric.
 
-Class Transitive {A} (R : relation A) :=
+Class transitive {A} (R : multirelation A) :=
   transitivity : forall x y z, R x y -> R y z -> R x z.
 
-Hint Unfold Transitive.
+Hint Unfold transitive.
 
 Notation "x .1" := (projT1 x) (at level 3).
 Notation "x .2" := (projT2 x) (at level 3).
 Notation "( x ; y )" := (existT _ x y).
-
-(** A [PreOrder] is both Reflexive and Transitive. *)
-Class PreOrder {A} (R : relation A) :=
-  { PreOrder_Reflexive :> Reflexive R | 2 ;
-    PreOrder_Transitive :> Transitive R | 2 }.
 
 Tactic Notation "etransitivity" open_constr(y) :=
   let R := match goal with |- ?R ?x ?z => constr:(R) end in
@@ -96,13 +91,13 @@ Ltac path_induction :=
 
 Local Obligation Tactic := autounfold; program_simpl; path_induction; auto.
 
-Program Instance reflexive_paths {A} : Reflexive (@paths A) | 0 := _.
-Program Instance transitive_paths {A} : Transitive (@paths A) | 0 := _.
-Program Instance symmetric_paths {A} : Symmetric (@paths A) | 0 := _.
+Program Instance reflexive_paths {A} : reflexive (@paths A) | 0 := _.
+Program Instance transitive_paths {A} : transitive (@paths A) | 0 := _.
+Program Instance symmetric_paths {A} : symmetric (@paths A) | 0 := _.
 
-Program Instance reflexive_based_paths {A} : Reflexive (@based_paths A)| 0  := _.
-Program Instance transitive_based_paths {A} : Transitive (@based_paths A) | 0 := _.
-Program Instance symmetric_based_paths {A} : Symmetric (@based_paths A) | 0 := _.
+Program Instance reflexive_based_paths {A} : reflexive (@based_paths A)| 0  := _.
+Program Instance transitive_based_paths {A} : transitive (@based_paths A) | 0 := _.
+Program Instance symmetric_based_paths {A} : symmetric (@based_paths A) | 0 := _.
   
 (* an (∞,1)-category / category up to coherent homotopy *)
 
@@ -133,8 +128,8 @@ Arguments right_id [!C x y] f%hom : rename.
 Arguments left_id [!C x y] f%hom : rename.
 Arguments id_id [!C x] : rename.
 
-Program Instance category_reflexive {C : category} : Reflexive C := @id C.
-Program Instance category_transitive {C : category} : Transitive C := λ x y z f g, @compose C x y z g f.
+Program Instance category_reflexive {C : category} : reflexive C := @id C.
+Program Instance category_transitive {C : category} : transitive C := λ x y z f g, @compose C x y z g f.
 
 Bind Scope hom_scope with hom.
 
@@ -167,7 +162,7 @@ Arguments inverse_inverse       [!C x y] f%hom : rename.
 Arguments inverse_left_inverse  [!C x y] f%hom : rename.
 Arguments inverse_right_inverse [!C x y] f%hom : rename.
 
-Program Instance groupoid_symmetric {C : groupoid} : Symmetric C := @inverse C.
+Program Instance groupoid_symmetric {C : groupoid} : symmetric C := @inverse C.
 
 Hint Resolve inverse_inverse inverse_left_inverse inverse_right_inverse.
 Hint Rewrite inverse_inverse inverse_left_inverse inverse_right_inverse : category.
@@ -194,7 +189,7 @@ Arguments path_compose [A x y z] f%hom g%hom.
 Arguments path_inverse [A x y] f%hom : simpl nomatch.
 
 Infix "∘" := path_compose : path_scope.
-Notation "! p" := (path_inverse p) (at level 40) : path_scope.
+Notation "p ^" := (path_inverse p) (at level 40) : path_scope.
 
 (* based paths *)
 
@@ -217,6 +212,10 @@ Record functor (C: category) (D: category) :=
 ; map_compose : ∀ {x y z : ob C} (f : y ~> z) (g : x ~> y),
    map f ∘ map g ~ map (f ∘ g)
 }.
+
+Hint Rewrite map_id map_compose : category hom.
+Hint Resolve map map_id map_compose : category.
+Hint Resolve map map_id map_compose : hom.
 
 Arguments map_ob [C%category D%category] F x : rename.
 Arguments map [C%category D%category] !F [x y] f%hom : rename.
@@ -419,8 +418,6 @@ Section category_eq.
 
   Definition transport_id {A} := map (transport (λ (hom : A -> A -> Type), ∀ (x : A), hom x x)).
 
-  
-
   Definition transport_id' := transport_id homs.
 
 
@@ -450,7 +447,7 @@ Program Definition id_id_functor {C} : compose_functor (id_functor C) (id_functo
 
 Program Definition eta `(f : A -> B) : f ~ (λ x, f x) := _.
 
-(*
+
 Program Definition right_id_functor `(f : functor C D) : compose_functor f (id_functor C) ~ f := _.
 Obligation 1.
   unfold compose_functor.
@@ -462,8 +459,7 @@ Obligation 1.
   unfold compose_functor_obligation_1.
   unfold compose_functor_obligation_2.
   simpl.
-
-
+  
 Abort right_id_functor.
 *)
 
@@ -473,6 +469,7 @@ Higher Inductive circle : Type
   := base : circle
    | loop : base = base.
 *)
+       
 
 Module Export circle.
 
@@ -480,14 +477,17 @@ Module Export circle.
   Axiom loop : base ~ base.
 
   (* dependent elimination *)
-  Program Definition circle_ind (B: circle -> Type) (b : B base) (l : loop # b ~ b) (x : circle) : B x.
+  Program Definition circle_ind
+    (B: circle -> Type) (b : B base)
+    (l : loop # b ~ b) (x : circle) : B x.
   Proof.
     destruct x.
     apply b.
   Defined.
 
   (* non-dependent elimination *)
-  Program Definition circle_rect (B : Type) (b : B) (l : b ~ b) : circle -> B.
+  Program Definition circle_rect
+    (B : Type) (b : B) (l : b ~ b) : circle -> B.
   Proof.
    intros.
    destruct H.
