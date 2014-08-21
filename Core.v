@@ -36,8 +36,8 @@ Inductive based_paths {A} (x: A) : A → Type :=
 Inductive paths {A} : A → A → Type :=
   refl : ∀ (x: A), paths x x.
 
-Bind Scope path_scope with based_paths.
-Bind Scope path_scope with paths.
+Bind Scope hom_scope with based_paths.
+Bind Scope hom_scope with paths.
 
 Arguments paths [A] x y, A x y : rename.
 Arguments based_paths [A] x y, A x y : rename.
@@ -47,7 +47,6 @@ Arguments refl [A x], [A] x, A x.
 Hint Resolve refl refl'.
 
 Notation "x ~ y" := (paths x y) (at level 70).
-(* Notation "x ~{ A }~ y" := (paths A x y) (at level 69). *)
 
 Ltac path_induction :=
   intros; repeat progress (
