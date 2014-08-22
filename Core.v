@@ -44,34 +44,11 @@ Arguments based_paths [A] x y, A x y : rename.
 Arguments refl' [A x], [A] x, A x.
 Arguments refl [A x], [A] x, A x.
 
-Hint Resolve refl refl'.
+Hint Resolve refl'.
+Hint Resolve refl.
 
 Notation "x ~ y" := (paths x y) (at level 70).
 
-Ltac path_induction :=
-  intros; repeat progress (
-     match goal with
-     | [ p : @paths _ _ _ |- _ ] => destruct p
-     | [ p : @based_paths _ _ _ |- _ ] => destruct p
-     | _ => idtac
-     end
-  ).
-
-(*
-Ltac f_ap :=
-  idtac;
-  lazymatch goal with
-    | [ |- ?f ?x = ?g ?x ] => apply (@apD10 _ _ f g);
-                             try (done || f_ap)
-    | _ => apply ap11;
-          [ done || f_ap
-          | trivial ]
-  end.
-
-*)
-Local Obligation Tactic := autounfold; program_simpl; path_induction; auto.
-
-  
 (* an (∞,1)-category / category up to coherent homotopy *)
 
 Record category :=
@@ -135,6 +112,51 @@ Arguments inverse_right_inverse [!C x y] f%hom : rename.
 Hint Resolve inverse_inverse inverse_left_inverse inverse_right_inverse.
 Hint Rewrite inverse_inverse inverse_left_inverse inverse_right_inverse : category.
 Hint Rewrite inverse_inverse inverse_left_inverse inverse_right_inverse : hom.
+
+(** tactics *)
+
+
+Ltac path_induction :=
+  intros; repeat progress (
+     match goal with
+     | [ p : @paths _ _ _ |- _ ] => destruct p
+     | [ p : @based_paths _ _ _ |- _ ] => destruct p
+     | _ => idtac
+     end
+  ).
+
+Local Obligation Tactic :=
+  autounfold; program_simpl; path_induction; auto.
+
+
+(** Ssreflect tactics, adapted by Robbert Krebbers *)
+Ltac done :=
+  trivial; intros; solve
+    [ repeat first
+      [ solve [trivial]
+      | solve [eapply inverse; trivial]
+      | reflexivity
+      (* Discriminate should be here, but it doesn't work yet *)
+      (* | discriminate *)
+      | contradiction
+      | split ]
+    | match goal with
+      H : ~ _ |- _ => solve [destruct H; trivial]
+      end ].
+
+Tactic Notation "by" tactic(tac) := tac; done.
+
+Program Definition ap11 {A B} {f g:A→B} (h:f ~ g) {x y:A} (p:x ~ y) : f x ~ g y := _.
+Program Definition apD10 {A} {B:A→Type} {f g : ∀ x, B x} (h:f ~ g) : ∀ x, f x ~ g x := _.
+
+Ltac f_ap :=
+  idtac;
+  lazymatch goal with
+    | [ |- ?f ?x = ?g ?x ] => apply (@apD10 _ _ f g); try (done || f_ap)
+    | _ => apply ap11;
+          [ done || f_ap
+          | trivial ]
+  end.
 
 (** types *)
 
@@ -232,8 +254,11 @@ Program Definition coe := Build_functor (Paths Type) Types _ _ _ _.
 Program Definition base {A} {P : A → Type} {u v : sigT P} := Build_functor (Paths A) Types _ _ _ _.
 
 Program Definition based {A} := Build_functor (Paths A) (BasedPaths A) _ _ _ _.
+
 Program Definition debased {A} := Build_functor (BasedPaths A) (Paths A) _ _ _ _.
 
+
+(* Product categories *)
 Program Definition Product (C D : category) : category :=
  {| ob := prod (ob C) (ob D)
   ; hom := λ x y, prod (hom C (fst x) (fst y)) (hom D (snd x) (snd y))
@@ -280,32 +305,10 @@ Obligation 7.
   - apply (ap (λ x, (1 ∘ 1, x)) (id_id (C := D))).
 Defined.
 
-(* 
-
-(* annoying one-off definition *)
-Definition ap11 {A B} {f g:A→B} {x y:A} (h:f ~ g) (p:x ~ y) : f x ~ g y.
-Proof.
-  case h, p;
-  apply @refl.
-Defined.
-
-Definition ap11 {A B} {f g:A→B} (h:f ~ g) := Build_functor (Paths (A -> B) * (Paths A) (Paths B) {x y:A} (p:x ~ y) : f x ~  g y.
-Proof.
-  case h, p; reflexivity.
-Defined.
-
-Program Definition ap11_f `(f : A → B) 
-
-Definition natural_isomorphism {A} {P: A -> Type} (f g : ∀ x: A, P x) :=
-  ∀ (x: A), f x = f x.
-
-Definition apD10 {A} {B:A→Type} {f g : ∀ x, B x} (h:f=g)
-  : f == g
-  := fun x ⇒ match h with idpath ⇒ 1 end.
-
-*)
+Notation "C * D" := (Product C D) : category_scope.
 
 
+(** Uniqueness of identity *)
 Section unique_id.
   Variable C : category.
   Implicit Types x y : C.
@@ -341,6 +344,8 @@ Section inverses.
     inverse_right_inverse f ∘ ap (compose f) H.
 
 End inverses.
+
+(** H-Levels *)
 
 (* h-levels 0..2 *)
 Definition is_contractible (A : Type) := {x : A & ∀ y : A, y ~ x}.
@@ -400,18 +405,7 @@ Ltac contract_fiber y p :=
 Definition is_weq {A B} (f : A → B) := ∀ (y : B), is_contractible (fiber f y).
 Definition weq A B := { f : A → B & is_weq f }.
 
-Ltac category_tricks :=
-  first
-  [ apply compose
-  ].
-
 Program Definition opap A B (f: A -> B) (x y : A) (p : x ~ y) : inverse (ap f p) ~ ap f (inverse p) := _.
-
-Ltac path_tricks :=
-  first
-  [ apply opap
-  | category_tricks
-  ].
 
 Lemma total_paths {A : Type} (P : A → Type) (x y : sigT P) (p : x.1 ~ y.1) (q : p # x.2 ~ y.2) : x ~ y.
 Proof.
@@ -446,7 +440,6 @@ Section category_eq.
 
 
   Definition homC' := transport_hom (hom C).
-
 
   Variable homs : homC' ~ hom D.
 
@@ -485,26 +478,17 @@ Program Definition right_id_functor `(f : functor C D) : compose_functor f (id_f
 Obligation 1.
   unfold compose_functor.
   unfold id_functor.
+  destruct f.
   unfold id_functor_obligation_1.
   unfold id_functor_obligation_2.
   unfold id_functor_obligation_3.
   unfold id_functor_obligation_4.
   unfold compose_functor_obligation_1.
   unfold compose_functor_obligation_2.
-  destruct f.
   simpl in *.
-  change (fun (x : C) => map_ob0 x) 
-    with (map_ob0).
-  change (fun (x y : C) (g : C x y) => map0 x y g)
-    with map0.
-  change (fun (x : C) => path_compose (map_id f) refl) 
-    with (fun (x : C) => @map_id C D f x).
-
-  y := {| map_ob := map_ob f; map := map f;
-   map_id := (λ x : C, path_compose (map_id f) refl;
-   map_compose := λ (x y z : C) (f0 : C y z) (g : C x y),
-                  path_compose refl (map_compose f f0 g) |} ~ f).
-  
+  f_ap.
+  Set Printing All.
+  change map_id0 at 2 with (λ x : C, map_id0 x).
 Abort right_id_functor.
 
 
