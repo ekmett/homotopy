@@ -57,6 +57,18 @@ Ltac path_induction :=
      end
   ).
 
+(*
+Ltac f_ap :=
+  idtac;
+  lazymatch goal with
+    | [ |- ?f ?x = ?g ?x ] => apply (@apD10 _ _ f g);
+                             try (done || f_ap)
+    | _ => apply ap11;
+          [ done || f_ap
+          | trivial ]
+  end.
+
+*)
 Local Obligation Tactic := autounfold; program_simpl; path_induction; auto.
 
   
@@ -113,7 +125,7 @@ Record groupoid  :=
 ; inverse_right_inverse : ∀ {x y : groupoid_category} (f : x ~> y), f ∘ inverse f ~ id
 }.
 
-Notation "! p" := (@inverse _ _ _ _ _ p) (at level 40) : hom_scope.
+Notation "p ^" := (@inverse _ _ _ _ _ p) (at level 40) : hom_scope.
 
 Arguments inverse               [!C x y] f%hom : rename, simpl nomatch.
 Arguments inverse_inverse       [!C x y] f%hom : rename.
@@ -123,7 +135,6 @@ Arguments inverse_right_inverse [!C x y] f%hom : rename.
 Hint Resolve inverse_inverse inverse_left_inverse inverse_right_inverse.
 Hint Rewrite inverse_inverse inverse_left_inverse inverse_right_inverse : category.
 Hint Rewrite inverse_inverse inverse_left_inverse inverse_right_inverse : hom.
-Hint Rewrite inverse_inverse inverse_left_inverse inverse_right_inverse : path.
 
 (** types *)
 
@@ -144,9 +155,6 @@ Definition path_inverse {A} := inverse (C:=@Paths A).
 Arguments path_compose [A x y z] f%hom g%hom.
 Arguments path_inverse [A x y] f%hom : simpl nomatch.
 
-Infix "∘" := path_compose : path_scope.
-Notation "p ^" := (path_inverse p) (at level 40) : path_scope.
-
 (* based paths *)
 
 Program Definition BasedPaths A : groupoid :=
@@ -157,9 +165,6 @@ Definition based_path_inverse {A} := inverse (C:=@BasedPaths A).
 
 Arguments based_path_compose [A x y z] f%hom g%hom.
 Arguments based_path_inverse [A x y] f%hom.
-
-Infix "∘" := based_path_compose : based_path_scope.
-Notation "! p" := (based_path_inverse p) (at level 40) : based_path_scope.
 
 Record functor (C: category) (D: category) :=
 { map_ob : ob C → ob D
@@ -213,6 +218,7 @@ Program Definition contramap `(F : functor (op C) D) {x y : C} (f : C x y) := ma
 
 Program Definition ap `(f : A → B) := Build_functor (Paths A) (Paths B) f _ _ _.
 
+
 Program Definition transport {A : Type} `(P: A → Type) := Build_functor (Paths A) Types P _ _ _.
 Notation "p # x" := (transport _ p x) (right associativity, at level 65, only parsing).
 
@@ -228,6 +234,78 @@ Program Definition base {A} {P : A → Type} {u v : sigT P} := Build_functor (Pa
 Program Definition based {A} := Build_functor (Paths A) (BasedPaths A) _ _ _ _.
 Program Definition debased {A} := Build_functor (BasedPaths A) (Paths A) _ _ _ _.
 
+Program Definition Product (C D : category) : category :=
+ {| ob := prod (ob C) (ob D)
+  ; hom := λ x y, prod (hom C (fst x) (fst y)) (hom D (snd x) (snd y))
+ |}.
+Obligation 1.
+  apply pair.
+  - apply id.
+  - apply id.
+Defined.
+Obligation 2.
+  simpl in *. 
+  apply pair.
+  - apply (compose h1 h).
+  - apply (compose h2 h0).   
+Defined.
+Obligation 3.
+  simpl in *.
+  apply path_compose with (y := (h3 ∘ (h1 ∘ h), (h4 ∘ h2) ∘ h0)).
+  - apply (ap (λ x, (x, (h4 ∘ h2) ∘ h0)) (compose_assoc (C := C) h3 h1 h)).
+  - apply (ap (λ x, (h3 ∘ (h1 ∘ h), x)) (compose_assoc (C := D) h4 h2 h0)).
+Defined.
+Obligation 4.
+  simpl in *.
+  apply path_compose with (y := ((h3 ∘ h1) ∘ h, h4 ∘ (h2 ∘ h0))).
+  - apply (ap (λ x, (x, (h4 ∘ (h2 ∘ h0)))) (compose_assoc_op (C := C) h3 h1 h)).
+  - apply (ap (λ x, ((h3 ∘ h1) ∘ h, x)) (compose_assoc_op (C := D) h4 h2 h0)).
+Defined.
+Obligation 5.
+  simpl in *.
+  apply path_compose with (y := (h ∘ 1, h0)).
+  - apply (ap (λ x, (x, h0))   (right_id (C := C) h)).
+  - apply (ap (λ x, (h ∘ 1, x)) (right_id (C := D) h0)). 
+Defined.
+Obligation 6.
+  simpl in *.
+  apply path_compose with (y := (1 ∘ h, h0)).
+  - apply (ap (λ x, (x, h0))   (left_id (C := C) h)).
+  - apply (ap (λ x, (1 ∘ h, x)) (left_id (C := D) h0)). 
+Defined.  
+Obligation 7.
+  simpl in *.
+  apply path_compose with (y := (1 ∘ 1, 1)).
+  - apply (ap (λ x, (x, 1)) (id_id (C := C))).
+  - apply (ap (λ x, (1 ∘ 1, x)) (id_id (C := D))).
+Defined.
+
+(* 
+
+(* annoying one-off definition *)
+Definition ap11 {A B} {f g:A→B} {x y:A} (h:f ~ g) (p:x ~ y) : f x ~ g y.
+Proof.
+  case h, p;
+  apply @refl.
+Defined.
+
+Definition ap11 {A B} {f g:A→B} (h:f ~ g) := Build_functor (Paths (A -> B) * (Paths A) (Paths B) {x y:A} (p:x ~ y) : f x ~  g y.
+Proof.
+  case h, p; reflexivity.
+Defined.
+
+Program Definition ap11_f `(f : A → B) 
+
+Definition natural_isomorphism {A} {P: A -> Type} (f g : ∀ x: A, P x) :=
+  ∀ (x: A), f x = f x.
+
+Definition apD10 {A} {B:A→Type} {f g : ∀ x, B x} (h:f=g)
+  : f == g
+  := fun x ⇒ match h with idpath ⇒ 1 end.
+
+*)
+
+
 Section unique_id.
   Variable C : category.
   Implicit Types x y : C.
@@ -238,7 +316,8 @@ Section unique_id.
     (x: C) : id0 x ~ id1 x :=
       id0_right x x (id1 x) ∘ id1_left x x (id0 x).
 
-  Program Definition as_left_id {x y} (f : x ~> y) (i : y ~> y) (H : i ~ id) : i ∘ f ~ f := left_id f ∘ ap (λ i, i ∘ f) H.
+  Program Definition as_left_id {x y} (f : x ~> y) (i : y ~> y) (H : i ~ id) : i ∘ f ~ f :=
+    left_id f ∘ ap (λ i, i ∘ f) H.
 
   Definition as_right_id {x y} (f : x ~> y) (i : x ~> x) (H: i ~ id) : f ∘ i ~ f :=
     right_id f ∘ ap (compose f) H.
@@ -334,7 +413,6 @@ Ltac path_tricks :=
   | category_tricks
   ].
 
-
 Lemma total_paths {A : Type} (P : A → Type) (x y : sigT P) (p : x.1 ~ y.1) (q : p # x.2 ~ y.2) : x ~ y.
 Proof.
   destruct x as [x H].
@@ -403,7 +481,6 @@ Program Definition id_id_functor {C} : compose_functor (id_functor C) (id_functo
 
 Program Definition eta `(f : A -> B) : f ~ (λ x, f x) := _.
 
-
 Program Definition right_id_functor `(f : functor C D) : compose_functor f (id_functor C) ~ f := _.
 Obligation 1.
   unfold compose_functor.
@@ -414,7 +491,19 @@ Obligation 1.
   unfold id_functor_obligation_4.
   unfold compose_functor_obligation_1.
   unfold compose_functor_obligation_2.
-  simpl.
+  destruct f.
+  simpl in *.
+  change (fun (x : C) => map_ob0 x) 
+    with (map_ob0).
+  change (fun (x y : C) (g : C x y) => map0 x y g)
+    with map0.
+  change (fun (x : C) => path_compose (map_id f) refl) 
+    with (fun (x : C) => @map_id C D f x).
+
+  y := {| map_ob := map_ob f; map := map f;
+   map_id := (λ x : C, path_compose (map_id f) refl;
+   map_compose := λ (x y z : C) (f0 : C y z) (g : C x y),
+                  path_compose refl (map_compose f f0 g) |} ~ f).
   
 Abort right_id_functor.
 
