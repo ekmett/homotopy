@@ -1,1 +1,7 @@
+.coq-native
+.dir-locals.el
+*.aux
+*.glob
+*.vo
 *~
+old
