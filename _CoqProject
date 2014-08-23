@@ -1,3 +1,6 @@
--R . Homotopy -indices-matter -no-native-compiler
+-R . Homotopy
+./Circle.v
 ./Core.v
-./Notation.v
+./Level.v
+./Product.v
+./Sigma.v
