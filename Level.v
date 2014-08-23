@@ -1,7 +1,6 @@
 Require Import Coq.Unicode.Utf8_core.
 Require Import Coq.Program.Tactics.
 Require Export Homotopy.Core.
-Require Export Homotopy.Sigma.
 
 Set Automatic Introduction.
 Set Implicit Arguments.
