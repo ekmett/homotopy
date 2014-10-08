@@ -311,29 +311,36 @@ Next Obligation.
   - apply map_compose.
 Defined.
 
-Program Definition id_id_functor {C} : compose_functor (id_functor C) (id_functor C) ~ id_functor C := _.
+Program Definition id_id_functor {C}
+  : compose_functor (id_functor C) (id_functor C) ~ id_functor C := _.
 
-(*
-Program Definition right_id_functor `(f : functor C D) : compose_functor f (id_functor C) ~ f := _.
+Lemma right_id_path {A : Type} {x y : A} (p : x ~ y) : path_compose p refl ~ p.
+Proof.
+  unfold path_compose.
+  destruct p. done.
+Qed.
+
+Program Definition right_id_functor `(f : functor C D)
+  : compose_functor f (id_functor C) ~ f := _.
 Obligation 1.
-  unfold compose_functor.
-  unfold id_functor.
-  destruct f.
+  unfold compose_functor, id_functor. simpl.
   unfold id_functor_obligation_1.
   unfold id_functor_obligation_2.
   unfold id_functor_obligation_3.
   unfold id_functor_obligation_4.
   unfold compose_functor_obligation_1.
-  unfold compose_functor_obligation_2.
-  simpl in *.
-  f_ap.
-  Set Printing All.
-  change map_id0 at 2 with (λ x : C, map_id0 x).
+  unfold compose_functor_obligation_2. simpl.
+  destruct f. simpl. f_ap.
+  - change map_id0 at 2 with (λ x : C, map_id0 x).
+    unfold path_compose.
+    admit.
+  - change map_compose0 at 2 with (λ x : C, map_compose0 x).
+    unfold path_compose.
+    admit.
 Abort right_id_functor.
 
-*)
-
-Lemma total_paths {A : Type} (P : A → Type) (x y : sigT P) (p : x.1 ~ y.1) (q : p # x.2 ~ y.2) : x ~ y.
+Lemma total_paths {A : Type} (P : A → Type) (x y : sigT P)
+  (p : x.1 ~ y.1) (q : p # x.2 ~ y.2) : x ~ y.
 Proof.
   destruct x as [x H].
   destruct y as [y G].
